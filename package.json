@@ -1,0 +1,12 @@
+{
+    "name": "chakkhan-changa-fullstack",
+    "version": "1.0.0",
+    "description": "Premium Indie Game: Chakkhan Changa",
+    "main": "server/server.js",
+    "scripts": {
+        "start": "node server/server.js",
+        "build": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
+        "dev:frontend": "npm run dev --prefix client",
+        "dev:backend": "node server/server.js"
+    }
+}

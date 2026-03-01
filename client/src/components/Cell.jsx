@@ -46,9 +46,18 @@ const HOME_CELLS = {
     10: { color: '#22c55e', bg: 'rgba(34,197,94,0.14)', rotate: 90 }, // left   → roof right
 };
 
+// ── Strictly highlighted colored cells (per user request) ─────────────────
+// Only 2, 7, 10, 11, 12(Center), 13, 14, 17, 22 are filled.
+const HIGHLIGHT_COLORS = {
+    22: '#ef4444', 17: '#ef4444', // p1 (bottom-up)
+    14: '#3b82f6', 13: '#3b82f6', // p2 (right-left)
+    2: '#facc15', 7: '#facc15',  // p3 (top-down)
+    10: '#22c55e', 11: '#22c55e', // p4 (left-right)
+};
+
 const INNER_RING = new Set([6, 7, 8, 11, 13, 16, 17, 18]);
 
-// Reverse lookup: globalCell → player color for front-of-house cells
+// Reverse lookup: globalCell → player color for front-of-house shields (transparent)
 const FRONT_OF_HOUSE_INFO = {};
 Object.entries(FRONT_OF_HOUSE).forEach(([player, cell]) => {
     const colors = { p1: '#ef4444', p2: '#3b82f6', p3: '#facc15', p4: '#22c55e' };
@@ -59,26 +68,26 @@ Object.entries(FRONT_OF_HOUSE).forEach(([player, cell]) => {
 const Cell = ({ cellIndex, theme }) => {
     const isSafe = SAFE_CELLS.includes(cellIndex);
     const isCenter = cellIndex === 12;
-    const isInner = INNER_RING.has(cellIndex);
     const homeData = HOME_CELLS[cellIndex];
     const gateway = GATEWAYS[cellIndex];
-    const entryColor = INNER_ENTRIES[cellIndex];
-    const isFinal = INNER_FINALS.has(cellIndex);
     const outerArrow = OUTER_FLOW[cellIndex];
     const innerArrow = INNER_FLOW[cellIndex];
     const frontOfHouseColor = FRONT_OF_HOUSE_INFO[cellIndex];
 
-    // Background
+    // Strict Highlight Colors
+    const highlightColor = HIGHLIGHT_COLORS[cellIndex];
+
+    // Background Setup
     let bgClass = 'transition-colors duration-500';
     let bgStyle = { backgroundColor: theme?.colors?.cell || '#ffffff' };
 
     if (isCenter) {
         bgClass += ' bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500';
         bgStyle = {};
+    } else if (highlightColor) {
+        // Apply a gentle solid fill for the requested highlighted cells
+        bgStyle = { background: `${highlightColor}33` }; // Adding some transparency for aesthetics, but strongly colored
     }
-    else if (homeData) { bgStyle = { background: homeData.bg }; }
-    else if (gateway) { bgStyle = { background: `${gateway.color}15` }; }
-    else if (entryColor) { bgStyle = { background: `${entryColor}15` }; }
 
     return (
         <div className={`relative w-full h-full overflow-hidden box-border border-2 ${bgClass}`} style={{ ...bgStyle, borderColor: theme?.colors?.accent || 'rgba(255,255,255,0.1)' }}>

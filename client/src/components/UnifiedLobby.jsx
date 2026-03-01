@@ -39,6 +39,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
     // --- UI Toggle State ---
     const [activeTab, setActiveTab] = useState('home'); // 'home' | 'friends' | 'rank' | 'settings'
+    const [showRules, setShowRules] = useState(false);
 
     // --- Social State ---
     const [friends, setFriends] = useState([]);
@@ -242,7 +243,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                             const isEmpty = !player;
                             const showInvite = isEmpty && lobbyMode === 'ONLINE' && matchType === 'PRIVATE';
                             return (
-                                <div key={i} className="aspect-[3/4] w-full max-w-[150px] mx-auto">
+                                <div key={i} className="aspect-[3/4] w-full max-w-[105px] mx-auto">
                                     <LobbyPlayerCard
                                         player={player}
                                         isEmpty={isEmpty}
@@ -388,6 +389,9 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700/50 flex-1 flex flex-col overflow-hidden shadow-xl mb-4">
                 <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                     <span className="text-slate-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2"><Users size={16} className="text-amber-400" /> Friends Online</span>
+                    <button className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 py-1.5 px-3 rounded-lg border border-emerald-500/30 transition-colors">
+                        <UserPlus size={14} /> Add Friend
+                    </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
                     {friends.length === 0 ? (
@@ -447,27 +451,40 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase mb-6 pl-2">Settings</h2>
 
             <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl border border-slate-700/50 p-5 shadow-xl space-y-8">
-                {/* Game Guide Container */}
+                {/* Game Guide Modal Trigger */}
                 <div className="space-y-3">
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2"><HelpCircle size={14} /> How to Play</p>
-                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 text-sm text-slate-300 space-y-3 shadow-inner">
-                        <p className="flex items-start gap-2">
-                            <span className="text-amber-500 mt-0.5"><Star size={14} /></span>
-                            <span><strong>Goal:</strong> Be the first to move all your pieces to the center home zone. The game continues until only one player remains!</span>
-                        </p>
-                        <p className="flex items-start gap-2">
-                            <span className="text-red-400 mt-0.5"><Gamepad2 size={14} /></span>
-                            <span><strong>Rolls:</strong> Roll the dice to move. Rolling a <strong className="text-amber-400">4</strong> or an <strong className="text-amber-400">8</strong> grants you an extra bonus roll!</span>
-                        </p>
-                        <p className="flex items-start gap-2">
-                            <span className="text-blue-400 mt-0.5"><X size={14} /></span>
-                            <span><strong>Captures:</strong> Landing exactly on an opponent's piece sends it back to base. You also earn a bonus roll!</span>
-                        </p>
-                        <p className="flex items-start gap-2">
-                            <span className="text-emerald-400 mt-0.5"><Monitor size={14} /></span>
-                            <span><strong>Safe Zones:</strong> Crossed cells are Safe Zones. Pieces cannot be captured while resting on these squares.</span>
-                        </p>
-                    </div>
+                    <button
+                        onClick={() => setShowRules(true)}
+                        className="w-full flex items-center justify-between p-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl transition-colors group">
+                        <span className="text-amber-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                            <HelpCircle size={18} /> How to Play
+                        </span>
+                        <ChevronRight className="text-amber-500/50 group-hover:text-amber-400 transition-colors" size={20} />
+                    </button>
+
+                    {/* Embedded Expansion (instead of true modal for simplicity to avoid full screen z-index wars on tabs) */}
+                    {showRules && (
+                        <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 text-sm text-slate-300 space-y-4 shadow-inner relative animate-in fade-in slide-in-from-top-2">
+                            <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 bg-slate-900/50 rounded-full p-1"><X size={16} /></button>
+                            <h3 className="font-black text-amber-500 tracking-widest uppercase mb-1 border-b border-slate-700/50 pb-2">Rulebook</h3>
+                            <p className="flex items-start gap-3">
+                                <span className="text-amber-500 mt-0.5"><Star size={16} /></span>
+                                <span className="leading-relaxed"><strong>Goal:</strong> Be the first to move all your pieces to the center home zone. The game continues until only one player remains!</span>
+                            </p>
+                            <p className="flex items-start gap-3">
+                                <span className="text-red-400 mt-0.5"><Gamepad2 size={16} /></span>
+                                <span className="leading-relaxed"><strong>Rolls:</strong> Roll the dice to move. Rolling a <strong className="text-amber-400">4</strong> or an <strong className="text-amber-400">8</strong> grants you an extra bonus roll!</span>
+                            </p>
+                            <p className="flex items-start gap-3">
+                                <span className="text-blue-400 mt-0.5"><X size={16} /></span>
+                                <span className="leading-relaxed"><strong>Captures:</strong> Landing exactly on an opponent's piece sends it back to base. You also earn a bonus roll!</span>
+                            </p>
+                            <p className="flex items-start gap-3">
+                                <span className="text-emerald-400 mt-0.5"><Monitor size={16} /></span>
+                                <span className="leading-relaxed"><strong>Safe Zones:</strong> Crossed cells are Safe Zones. Pieces cannot be captured while resting on these squares.</span>
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Game Rules Container */}

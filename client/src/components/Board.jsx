@@ -3,18 +3,25 @@ import { useSelector } from 'react-redux';
 import Cell from './Cell';
 import Piece from './Piece';
 import { PLAYER_PATHS } from '../store/gameSlice';
+import { BOARD_THEMES } from './BoardThemeSelector';
 
 const Board = () => {
     const cells = Array.from({ length: 25 }, (_, i) => i);
     const piecesState = useSelector((state) => state.game.pieces);
     const currentPlayerIdx = useSelector((state) => state.game.currentPlayerIdx);
+    const playerCount = useSelector((state) => state.game.playerCount);
+    const activePlayersState = useSelector((state) => state.game.activePlayers);
+    const themeKey = useSelector((state) => state.game.boardTheme) || 'classic';
+    const theme = BOARD_THEMES.find(t => t.key === themeKey) || BOARD_THEMES[0];
+
     const PLAYERS = ['p1', 'p2', 'p3', 'p4'];
+    const activePlayers = activePlayersState || PLAYERS.slice(0, playerCount);
     const currentPlayer = PLAYERS[currentPlayerIdx];
 
     // Build a map of globalCell → list of {player, pieceIndex, posIndex}
     // so we can compute stacking offsets when multiple pieces share a cell
     const cellOccupancy = {};
-    ['p1', 'p2', 'p3', 'p4'].forEach(player => {
+    activePlayers.forEach(player => {
         piecesState[player].forEach((posIndex, pieceIndex) => {
             if (posIndex === -1) return;
             const cellIndex = posIndex === 24 ? 12 : PLAYER_PATHS[player][posIndex];
@@ -26,10 +33,11 @@ const Board = () => {
 
     return (
         <div className="relative w-full max-w-full md:max-w-[500px] aspect-square mx-auto
-            bg-slate-100 rounded-2xl md:rounded-3xl
+            rounded-2xl md:rounded-3xl
             shadow-[0_4px_0_#1e293b,0_10px_40px_rgba(0,0,0,0.6)]
-            border-[5px] md:border-[8px] border-slate-700
-            ring-2 ring-slate-900/60 ring-offset-1">
+            border-[5px] md:border-[8px]
+            ring-2 ring-slate-900/60 ring-offset-1 transition-colors duration-500"
+            style={{ backgroundColor: theme.colors.board, borderColor: theme.colors.accent }}>
 
             {/* Subtle checker texture */}
             <div className="absolute inset-0 rounded-xl md:rounded-2xl opacity-[0.03]
@@ -38,16 +46,25 @@ const Board = () => {
 
             {/* Grid — divide lines form the 5×5 board */}
             <div className="grid grid-cols-5 grid-rows-5 w-full h-full
-                border-2 border-slate-400 divide-x-2 divide-y-2 divide-slate-300
-                relative z-20 bg-white rounded-lg overflow-hidden">
-                {cells.map((cellIndex) => (
-                    <Cell key={cellIndex} cellIndex={cellIndex} />
-                ))}
+                border-2 divide-x-2 divide-y-2 relative z-20 rounded-lg overflow-hidden transition-colors duration-500"
+                style={{ borderColor: theme.colors.accent, backgroundColor: theme.colors.cell }}>
+                {/* Dynamically applying divide colors via CSS variables or inline is tricky, but we can set the cell backgrounds directly in Cell, 
+                    and the divide color is usually border color. We'll use a CSS trick or set inline borders in Cell if needed. */}
+                <style>{`
+                    .custom-divide > div {
+                        border-color: ${theme.colors.accent} !important;
+                    }
+                `}</style>
+                <div className="contents custom-divide">
+                    {cells.map((cellIndex) => (
+                        <Cell key={cellIndex} cellIndex={cellIndex} theme={theme} />
+                    ))}
+                </div>
             </div>
 
             {/* Piece Layer — absolute, on top of cells */}
             <div className="absolute inset-0 z-30 pointer-events-none">
-                {['p1', 'p2', 'p3', 'p4'].map(player =>
+                {activePlayers.map(player =>
                     piecesState[player].map((posIndex, pieceIndex) => {
                         if (posIndex === -1) return null;
 

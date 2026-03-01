@@ -18,7 +18,7 @@ const PlayerYard = ({ player }) => {
     const dispatch = useDispatch();
     const {
         pieces, hasCaptured, currentPlayerIdx, gameState,
-        isOnline, roomCode, localPlayerRole, connectedPlayers, gameMode
+        isOnline, roomCode, localPlayerRole, connectedPlayers, gameMode, botPlayers
     } = useSelector(s => s.game);
 
     const isCurrentTurn = PLAYERS[currentPlayerIdx] === player;
@@ -26,13 +26,16 @@ const PlayerYard = ({ player }) => {
     const piecesHome = pieces[player].filter(pos => pos === 24).length;
 
     // Determine if the human can interact with this yard
+    const isBot = botPlayers?.includes(player);
     let isLocalTurn = !isOnline || localPlayerRole === PLAYERS[currentPlayerIdx];
-    if (gameMode === 'BOTS' && PLAYERS[currentPlayerIdx] !== 'p1') isLocalTurn = false;
+    if (isBot) isLocalTurn = false; // bots are never locally controlled
 
     const canRoll = isCurrentTurn && isLocalTurn && (gameState === 'ROLLING' || gameState === 'EXTRA_MOVING');
-    const isBotThinking = isCurrentTurn && !isLocalTurn && gameMode === 'BOTS';
+    const isBotThinking = isCurrentTurn && isBot;
     const c = PLAYER_COLORS[player];
-    const playerLabel = (connectedPlayers?.find(p => p.role === player)?.username) || PLAYER_NAMES[player];
+    const playerLabel = isBot
+        ? `🤖 ${PLAYER_NAMES[player]}`
+        : (connectedPlayers?.find(p => p.role === player)?.username) || PLAYER_NAMES[player];
 
     const handleRoll = () => {
         if (!canRoll) return;

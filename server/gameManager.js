@@ -2,7 +2,7 @@ class GameManager {
     constructor(io) {
         this.io = io;
         this.rooms = new Map(); // roomCode -> roomData
-        this.matchmakingQueue = [];
+        this.matchmakingQueues = { 2: [], 3: [], 4: [] }; // separate queues per player count
     }
 
     generateRoomCode() {
@@ -10,16 +10,18 @@ class GameManager {
     }
 
     addToQueue(socket, userData) {
-        this.matchmakingQueue.push({ socket, userData });
-        console.log(`${userData?.username || socket.id} joined matchmaking`);
+        const playerCount = userData?.playerCount || 4;
+        const queue = this.matchmakingQueues[playerCount] || this.matchmakingQueues[4];
+        queue.push({ socket, userData });
+        console.log(`${userData?.username || socket.id} joined matchmaking (${playerCount}p)`);
 
-        // For Chakkhan Changa, we need 4 players for a full match
-        if (this.matchmakingQueue.length >= 4) {
-            const players = this.matchmakingQueue.splice(0, 4);
+        if (queue.length >= playerCount) {
+            const players = queue.splice(0, playerCount);
             const roomCode = this.generateRoomCode();
 
             this.rooms.set(roomCode, {
                 isPrivate: false,
+                playerCount,
                 players: players.map((p, index) => ({
                     id: p.socket.id,
                     username: p.userData?.username || `Player${index + 1}`,
@@ -32,23 +34,25 @@ class GameManager {
                 p.socket.emit('match_found', {
                     roomCode,
                     role: `p${index + 1}`,
-                    players: this.rooms.get(roomCode).players
+                    players: this.rooms.get(roomCode).players,
+                    playerCount
                 });
             });
-            console.log(`Match created: ${roomCode}`);
+            console.log(`Match created (${playerCount}p): ${roomCode}`);
         } else {
-            // Broadcast queue status to those waiting
-            this.matchmakingQueue.forEach(p => {
-                p.socket.emit('queue_update', { count: this.matchmakingQueue.length, required: 4 });
+            queue.forEach(p => {
+                p.socket.emit('queue_update', { count: queue.length, required: playerCount });
             });
         }
     }
 
     createPrivateRoom(socket, userData) {
+        const playerCount = userData?.playerCount || 4;
         const roomCode = this.generateRoomCode();
         this.rooms.set(roomCode, {
             isPrivate: true,
             host: socket.id,
+            playerCount,
             players: [{
                 id: socket.id,
                 username: userData?.username || 'Host',
@@ -56,7 +60,7 @@ class GameManager {
             }]
         });
         socket.join(roomCode);
-        console.log(`Private room created: ${roomCode}`);
+        console.log(`Private room created (${playerCount}p): ${roomCode}`);
         socket.emit('room_created', { roomCode, players: this.rooms.get(roomCode).players });
     }
 
@@ -66,7 +70,8 @@ class GameManager {
             socket.emit('error_message', { message: 'Room not found' });
             return;
         }
-        if (room.players.length >= 4) {
+        const pc = room.playerCount || 4;
+        if (room.players.length >= pc) {
             socket.emit('error_message', { message: 'Room is full' });
             return;
         }
@@ -81,49 +86,82 @@ class GameManager {
         room.players.push(newPlayer);
         socket.join(roomCode);
 
-        // Notify everyone in room about the updated player list
         this.io.to(roomCode).emit('lobby_update', { players: room.players });
 
-        // Auto-start when 4 players have joined
-        if (room.players.length === 4) {
+        // Auto-start when playerCount humans have joined
+        if (room.players.length === pc) {
             room.players.forEach(p => {
-                // Emit game_start to each player individually so they get their own role
                 this.io.to(p.id).emit('game_start', { role: p.role, players: room.players });
             });
-            console.log(`Private game auto-started: ${roomCode}`);
+            console.log(`Private game auto-started (${pc}p): ${roomCode}`);
         }
     }
 
+    startWithBots(socket, roomCode) {
+        const room = this.rooms.get(roomCode);
+        if (!room) return;
+        if (room.host !== socket.id) return; // only host can start with bots
+
+        const pc = room.playerCount || 4;
+        const existingPlayers = room.players.length;
+        const allSlots = ['p1', 'p2', 'p3', 'p4'].slice(0, pc);
+        const takenRoles = new Set(room.players.map(p => p.role));
+        const botPlayers = [];
+
+        // Fill remaining slots with bot placeholders
+        allSlots.forEach(role => {
+            if (!takenRoles.has(role)) {
+                room.players.push({
+                    id: `bot-${role}`,
+                    username: `Bot (${role === 'p1' ? 'Red' : role === 'p2' ? 'Blue' : role === 'p3' ? 'Yellow' : 'Green'})`,
+                    role,
+                    isBot: true
+                });
+                botPlayers.push(role);
+            }
+        });
+
+        // Notify everyone and start game
+        room.players.forEach(p => {
+            if (!p.isBot) {
+                this.io.to(p.id).emit('game_start', {
+                    role: p.role,
+                    players: room.players,
+                    botPlayers
+                });
+            }
+        });
+        console.log(`Game started with bots (${botPlayers.length} bots): ${roomCode}`);
+    }
+
     handleGameAction(socket, data) {
-        // Basic broadcasting of Redux actions across the socket room
         const { roomCode, action } = data;
         if (!roomCode || !action) return;
-
-        // Broadcast to everyone else in the room
         socket.to(roomCode).emit('sync_action', action);
     }
 
     handleDisconnect(socket) {
-        // Remove from queue
-        this.matchmakingQueue = this.matchmakingQueue.filter(p => p.socket.id !== socket.id);
-
-        // Alert others in the queue
-        this.matchmakingQueue.forEach(p => {
-            p.socket.emit('queue_update', { count: this.matchmakingQueue.length, required: 4 });
-        });
+        // Remove from all queues
+        for (const key of Object.keys(this.matchmakingQueues)) {
+            const queue = this.matchmakingQueues[key];
+            const before = queue.length;
+            this.matchmakingQueues[key] = queue.filter(p => p.socket.id !== socket.id);
+            if (this.matchmakingQueues[key].length !== before) {
+                this.matchmakingQueues[key].forEach(p => {
+                    p.socket.emit('queue_update', { count: this.matchmakingQueues[key].length, required: parseInt(key) });
+                });
+            }
+        }
 
         // Remove from rooms
         for (const [roomCode, room] of this.rooms.entries()) {
             const playerIndex = room.players.findIndex(p => p.id === socket.id);
             if (playerIndex !== -1) {
                 room.players.splice(playerIndex, 1);
-
-                // Re-assign roles or end game if it was active
-                // For now, let's just emit player left and lobby update
                 this.io.to(roomCode).emit('player_left', { message: 'A player disconnected.' });
                 this.io.to(roomCode).emit('lobby_update', { players: room.players });
 
-                if (room.players.length === 0) {
+                if (room.players.filter(p => !p.isBot).length === 0) {
                     this.rooms.delete(roomCode);
                 }
                 break;

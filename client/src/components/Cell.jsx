@@ -1,5 +1,5 @@
 import React from 'react';
-import { EXPORTED_SAFE_CELLS as SAFE_CELLS } from '../store/gameSlice';
+import { EXPORTED_SAFE_CELLS as SAFE_CELLS, EXPORTED_FRONT_OF_HOUSE as FRONT_OF_HOUSE } from '../store/gameSlice';
 
 // ── Outer ring flow arrows (direction piece moves FROM each cell) ──────────
 const OUTER_FLOW = {
@@ -48,8 +48,15 @@ const HOME_CELLS = {
 
 const INNER_RING = new Set([6, 7, 8, 11, 13, 16, 17, 18]);
 
+// Reverse lookup: globalCell → player color for front-of-house cells
+const FRONT_OF_HOUSE_INFO = {};
+Object.entries(FRONT_OF_HOUSE).forEach(([player, cell]) => {
+    const colors = { p1: '#ef4444', p2: '#3b82f6', p3: '#facc15', p4: '#22c55e' };
+    FRONT_OF_HOUSE_INFO[cell] = colors[player];
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
-const Cell = ({ cellIndex }) => {
+const Cell = ({ cellIndex, theme }) => {
     const isSafe = SAFE_CELLS.includes(cellIndex);
     const isCenter = cellIndex === 12;
     const isInner = INNER_RING.has(cellIndex);
@@ -59,14 +66,19 @@ const Cell = ({ cellIndex }) => {
     const isFinal = INNER_FINALS.has(cellIndex);
     const outerArrow = OUTER_FLOW[cellIndex];
     const innerArrow = INNER_FLOW[cellIndex];
+    const frontOfHouseColor = FRONT_OF_HOUSE_INFO[cellIndex];
 
     // Background
-    let bgClass = 'bg-white';
-    let bgStyle = {};
-    if (isCenter) bgClass = 'bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500';
-    else if (homeData) { bgClass = ''; bgStyle = { background: homeData.bg }; }
-    else if (gateway) { bgClass = ''; bgStyle = { background: `${gateway.color}10` }; }
-    else if (isInner) bgClass = 'bg-amber-50';
+    let bgClass = 'transition-colors duration-500';
+    let bgStyle = { backgroundColor: theme?.colors?.cell || '#ffffff' };
+
+    if (isCenter) {
+        bgClass += ' bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500';
+        bgStyle = {};
+    }
+    else if (homeData) { bgStyle = { background: homeData.bg }; }
+    else if (gateway) { bgStyle = { background: `${gateway.color}15` }; }
+    else if (isInner) { bgStyle = { backgroundColor: theme?.colors?.board || '#fef3c7' }; }
 
     return (
         <div className={`relative w-full h-full overflow-hidden box-border ${bgClass}`} style={bgStyle}>
@@ -145,6 +157,15 @@ const Cell = ({ cellIndex }) => {
                     <div className="absolute w-[75%] h-[1.5px] bg-slate-400/35 transform rotate-45 pointer-events-none rounded" />
                     <div className="absolute w-[75%] h-[1.5px] bg-slate-400/35 transform -rotate-45 pointer-events-none rounded" />
                 </>
+            )}
+
+            {/* ── FRONT-OF-HOUSE: player-colored shield icon (safe for that player) ── */}
+            {frontOfHouseColor && !gateway && (
+                <div className="absolute top-[2px] left-[2px] pointer-events-none select-none" style={{ opacity: 0.45 }}>
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4" fill={frontOfHouseColor} xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L3 7v6c0 5.25 3.83 10.15 9 11.25C17.17 23.15 21 18.25 21 13V7l-9-5z" />
+                    </svg>
+                </div>
             )}
 
             {/* ── OUTER RING flow arrow (corner, small, barely visible) ── */}

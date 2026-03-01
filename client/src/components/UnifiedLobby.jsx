@@ -17,7 +17,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     const dispatch = useDispatch();
     const { token, user } = useSelector(s => s.auth);
     const storedUsername = useSelector(s => s.game.localUsername) || user?.username || 'Player';
-    const { boardTheme, connectedPlayers, roomCode, gameMode, localPlayerRole } = useSelector(s => s.game);
+    const { boardTheme, connectedPlayers, roomCode, gameMode, localPlayerRole, bonusOnCapture, bonusOnEntry } = useSelector(s => s.game);
 
     // --- Lobby Configuration State ---
     const [lobbyMode, setLobbyMode] = useState('ONLINE'); // 'ONLINE' | 'OFFLINE'
@@ -39,6 +39,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     // --- UI Toggle State ---
     const [isFriendsOpen, setIsFriendsOpen] = useState(false);
     const [isStarMenuOpen, setIsStarMenuOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // --- Social State ---
     const [friends, setFriends] = useState([]);
@@ -357,7 +358,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             </button>
 
             {/* Popup Menu */}
-            <div className={`absolute bottom-20 left-0 transition-all duration-300 origin-bottom-left ${isStarMenuOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-75 opacity-0 pointer-events-none'}`}>
+            <div className={`absolute bottom-[72px] left-0 transition-all duration-300 origin-bottom-left ${isStarMenuOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-75 opacity-0 pointer-events-none'}`}>
                 <div className="bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-700/50 p-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-row gap-6">
 
                     {/* Theme Selector */}
@@ -484,16 +485,32 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     </div>
                 )}
 
-                {/* Vertical Utilities Group */}
-                <div className="flex flex-col gap-3 pointer-events-auto">
+                {/* Settings Popup */}
+                <div className={`absolute bottom-[100px] right-32 flex flex-col gap-2 p-4 w-64 bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-[0_10px_40px_rgba(0,0,0,0.5)] origin-bottom-right transition-all duration-300 pointer-events-auto ${isSettingsOpen ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'}`}>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1 px-2">Game Rules</p>
+                    <label className="flex items-center justify-between px-2 py-2 hover:bg-slate-800 rounded-lg cursor-pointer transition">
+                        <span className="text-xs font-bold text-slate-300">Roll on Capture</span>
+                        <input type="checkbox" checked={bonusOnCapture} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnCapture: e.target.checked } })} className="accent-amber-500 w-4 h-4 cursor-pointer" />
+                    </label>
+                    <label className="flex items-center justify-between px-2 py-2 hover:bg-slate-800 rounded-lg cursor-pointer transition">
+                        <span className="text-xs font-bold text-slate-300">Roll on Home</span>
+                        <input type="checkbox" checked={bonusOnEntry} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnEntry: e.target.checked } })} className="accent-amber-500 w-4 h-4 cursor-pointer" />
+                    </label>
+
+                    <div className="h-px bg-slate-700/50 my-2" />
+
+                    <button onClick={handleLogout} className="flex items-center justify-center gap-2 py-2.5 mx-1 bg-red-900/30 hover:bg-red-900/60 border border-red-900/50 text-red-400 rounded-xl transition text-xs font-bold">
+                        <LogOut size={16} /> LOGOUT
+                    </button>
+                </div>
+
+                {/* Horizontal Utilities Group */}
+                <div className="flex flex-row gap-3 pointer-events-auto mr-4 mb-2">
                     <button onClick={onLeaderboard} className="w-12 h-12 flex justify-center items-center bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-600/50 hover:bg-slate-700 text-amber-400 hover:scale-110 transition shadow-lg" title="Leaderboard">
                         <Trophy size={20} />
                     </button>
-                    <button className="w-12 h-12 flex justify-center items-center bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-600/50 hover:bg-slate-700 text-slate-300 hover:scale-110 transition shadow-lg" title="Settings">
+                    <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`w-12 h-12 flex justify-center items-center rounded-2xl border transition shadow-lg backdrop-blur-sm hover:scale-110 ${isSettingsOpen ? 'bg-amber-500 border-amber-400 text-slate-900' : 'bg-slate-800/80 border-slate-600/50 text-slate-300 hover:bg-slate-700'}`} title="Settings">
                         <Settings size={20} />
-                    </button>
-                    <button onClick={handleLogout} className="w-12 h-12 flex justify-center items-center bg-red-900/40 backdrop-blur-sm rounded-2xl border border-red-900/50 hover:bg-red-900/70 text-red-400 hover:scale-110 transition shadow-lg" title="Logout">
-                        <LogOut size={20} />
                     </button>
                 </div>
 

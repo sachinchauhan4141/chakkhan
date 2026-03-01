@@ -190,7 +190,7 @@ const App = () => {
         <ObjectSticks />
         {showExitConfirm && <ExitConfirm onStay={() => setShowExitConfirm(false)} onExit={exitToMenu} />}
         {isPaused && <PauseOverlay pauseCount={pauseCount} />}
-        {gameState === 'GAME_OVER' && <VictoryScreen playerLabel={playerLabel} accentColor={accentColor} onPlayAgain={exitToMenu} />}
+        {gameState === 'GAME_OVER' && <VictoryScreen finishedPlayers={fullGameState.finishedPlayers} activePlayers={fullGameState.activePlayers} onPlayAgain={exitToMenu} />}
       </div>
     </OrientationLock>
   );

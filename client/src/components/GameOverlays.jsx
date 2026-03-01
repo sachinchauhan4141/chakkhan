@@ -6,6 +6,7 @@ import React from 'react';
 import { useDispatch } from 'react-redux';
 import { togglePause } from '../store/gameSlice';
 import { Play } from 'lucide-react';
+import { PLAYER_NAMES, PLAYER_COLORS } from '../store/boardConstants';
 
 // ─── Exit Confirmation Dialog ────────────────────────────────────────────────
 export const ExitConfirm = ({ onStay, onExit }) => (
@@ -45,16 +46,39 @@ export const PauseOverlay = ({ pauseCount }) => {
 };
 
 // ─── Victory Screen ──────────────────────────────────────────────────────────
-export const VictoryScreen = ({ playerLabel, accentColor, onPlayAgain }) => (
-    <div className="fixed inset-0 bg-slate-900/95 z-[200] flex items-center justify-center backdrop-blur-md">
-        <div className="bg-slate-800 border-2 border-amber-500 rounded-3xl p-10 sm:p-16 text-center shadow-[0_0_60px_rgba(245,158,11,0.3)] max-w-sm w-full mx-4">
-            <div className="text-5xl mb-4">🏆</div>
-            <h1 className="cinzel-font text-4xl sm:text-5xl font-extrabold text-amber-400 mb-2">Victory!</h1>
-            <p className="text-xl text-slate-200 font-semibold mb-8" style={{ color: accentColor }}>{playerLabel} Wins</p>
-            <button onClick={onPlayAgain}
-                className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm transition-all shadow-lg">
-                Play Again
-            </button>
+export const VictoryScreen = ({ finishedPlayers = [], activePlayers = [], onPlayAgain }) => {
+    // Generate full rankings: first push all finished players, then append any remaining active players
+    const finalRankings = [...finishedPlayers];
+    activePlayers.forEach(p => {
+        if (!finalRankings.includes(p)) finalRankings.push(p);
+    });
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/95 z-[200] flex items-center justify-center backdrop-blur-md">
+            <div className="bg-slate-800 border-2 border-amber-500 rounded-3xl p-8 sm:p-12 text-center shadow-[0_0_60px_rgba(245,158,11,0.3)] max-w-sm w-full mx-4 flex flex-col items-center">
+                <div className="text-5xl mb-4">🏆</div>
+                <h1 className="cinzel-font text-4xl sm:text-5xl font-extrabold text-amber-400 mb-6 tracking-wide">Match Over</h1>
+
+                <div className="w-full flex flex-col gap-2 mb-8">
+                    {finalRankings.map((p, idx) => {
+                        const isFirst = idx === 0;
+                        return (
+                            <div key={p} className={`flex items-center px-4 py-3 rounded-xl border ${isFirst ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-700/30 border-slate-700'}`}>
+                                <span className={`w-8 text-left font-black ${isFirst ? 'text-amber-400 text-lg' : 'text-slate-500 text-sm'}`}>#{idx + 1}</span>
+                                <span className="flex-1 text-center font-black uppercase tracking-widest text-lg drop-shadow-md" style={{ color: PLAYER_COLORS[p] }}>
+                                    {PLAYER_NAMES[p]}
+                                </span>
+                                <span className="w-8"></span>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <button onClick={onPlayAgain}
+                    className="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black rounded-xl uppercase tracking-widest text-sm transition-all shadow-[0_4px_0_#b45309] hover:-translate-y-1 hover:shadow-[0_6px_0_#b45309] active:translate-y-1 active:shadow-none">
+                    Play Again
+                </button>
+            </div>
         </div>
-    </div>
-);
+    );
+};

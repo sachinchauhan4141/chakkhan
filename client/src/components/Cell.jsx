@@ -78,15 +78,10 @@ const Cell = ({ cellIndex, theme }) => {
     }
     else if (homeData) { bgStyle = { background: homeData.bg }; }
     else if (gateway) { bgStyle = { background: `${gateway.color}15` }; }
-    else if (isInner) { bgStyle = { backgroundColor: theme?.colors?.board || '#fef3c7' }; }
+    else if (entryColor) { bgStyle = { background: `${entryColor}15` }; }
 
     return (
-        <div className={`relative w-full h-full overflow-hidden box-border ${bgClass}`} style={bgStyle}>
-
-            {/* Warm wash on inner ring */}
-            {isInner && !isCenter && (
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-100/50 to-transparent pointer-events-none" />
-            )}
+        <div className={`relative w-full h-full overflow-hidden box-border border-2 ${bgClass}`} style={{ ...bgStyle, borderColor: theme?.colors?.accent || 'rgba(255,255,255,0.1)' }}>
 
             {/* ── CENTER: 4 triangles (two diagonals), each player's color ── */}
             {isCenter && (

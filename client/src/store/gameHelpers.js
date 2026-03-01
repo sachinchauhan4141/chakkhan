@@ -13,18 +13,27 @@ import {
 
 /**
  * Get the next player index following anticlockwise board order,
- * skipping any players NOT in the activePlayers array.
+ * skipping any players NOT in the activePlayers array, and skipping
+ * players who have already finished.
  *
  * @param {number} currentIdx - Index of the current player (0–3)
  * @param {string[]} activePlayers - Array of active player keys, e.g. ['p1','p3']
+ * @param {string[]} finishedPlayers - Array of player keys who have finished
  * @returns {number} Index of the next active player
  */
-export const getNextTurnIdx = (currentIdx, activePlayers) => {
-    const activeIndices = new Set(activePlayers.map(p => PLAYERS.indexOf(p)));
+export const getNextTurnIdx = (currentIdx, activePlayers, finishedPlayers = []) => {
+    const activeSet = new Set(activePlayers);
+    const finishedSet = new Set(finishedPlayers);
+    const validIndices = new Set(
+        PLAYERS
+            .filter(p => activeSet.has(p) && !finishedSet.has(p))
+            .map(p => PLAYERS.indexOf(p))
+    );
+
     const pos = FULL_TURN_ORDER.indexOf(currentIdx);
     for (let i = 1; i <= 4; i++) {
         const nextIdx = FULL_TURN_ORDER[(pos + i) % 4];
-        if (activeIndices.has(nextIdx)) return nextIdx;
+        if (validIndices.has(nextIdx)) return nextIdx;
     }
     return currentIdx; // fallback (shouldn't happen)
 };

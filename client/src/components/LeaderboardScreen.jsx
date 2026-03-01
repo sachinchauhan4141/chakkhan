@@ -6,7 +6,7 @@ const API = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
 const RANK_COLORS = { 1: '#fbbf24', 2: '#94a3b8', 3: '#d97706' };
 
-const LeaderboardScreen = ({ onBack }) => {
+const LeaderboardScreen = ({ onBack, isEmbedded }) => {
     const { user } = useSelector(s => s.auth);
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -19,12 +19,16 @@ const LeaderboardScreen = ({ onBack }) => {
     }, []);
 
     return (
-        <div className="fixed inset-0 bg-slate-900 flex flex-col overflow-hidden select-none" style={{ height: '100dvh' }}>
+        <div className={isEmbedded ? "flex-1 flex flex-col font-sans select-none" : "fixed inset-0 bg-slate-900 flex flex-col overflow-hidden select-none font-sans"} style={isEmbedded ? {} : { height: '100dvh' }}>
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-                <button onClick={onBack} className="text-slate-400 hover:text-slate-200"><ArrowLeft size={20} /></button>
-                <h2 className="cinzel-font text-amber-400 font-bold text-sm tracking-widest uppercase flex items-center gap-2">
-                    <Crown size={16} /> Leaderboard
+            <div className={`flex items-center justify-between px-4 border-b border-slate-800 ${isEmbedded ? 'pt-6 pb-2' : 'py-3'}`}>
+                {isEmbedded ? (
+                    <div className="w-5" /> // Spacer
+                ) : (
+                    <button onClick={onBack} className="text-slate-400 hover:text-slate-200"><ArrowLeft size={20} /></button>
+                )}
+                <h2 className={`cinzel-font text-amber-400 font-bold tracking-widest uppercase flex items-center gap-2 ${isEmbedded ? 'text-xl' : 'text-sm'}`}>
+                    <Crown size={isEmbedded ? 24 : 16} /> Leaderboard
                 </h2>
                 <div className="w-5" />
             </div>
@@ -39,7 +43,7 @@ const LeaderboardScreen = ({ onBack }) => {
             </div>
 
             {/* Scrollable list */}
-            <div className="flex-1 overflow-y-auto">
+            <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'pb-20' : ''}`}>
                 {loading ? (
                     <p className="text-slate-600 text-xs text-center py-12 animate-pulse">Loading…</p>
                 ) : leaderboard.length === 0 ? (

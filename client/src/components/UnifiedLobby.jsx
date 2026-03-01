@@ -44,6 +44,8 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
     // --- Social State ---
     const [friends, setFriends] = useState([]);
+    const [showAddFriend, setShowAddFriend] = useState(false);
+    const [addFriendInput, setAddFriendInput] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const chatEndRef = useRef(null);
@@ -175,6 +177,24 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
         if (joinCode.trim()) socketService.joinPrivateRoom(joinCode.trim().toUpperCase(), { username: storedUsername });
     };
 
+    const handleAddFriend = (e) => {
+        e.preventDefault();
+        if (!addFriendInput.trim()) return;
+
+        // Simulate adding a friend
+        const newFriend = {
+            _id: Date.now().toString(),
+            username: addFriendInput.trim(),
+            mmr: 1000,
+            isOnline: true
+        };
+
+        setFriends(prev => [newFriend, ...prev]);
+        setAddFriendInput('');
+        setShowAddFriend(false);
+        dispatch({ type: 'game/addLog', payload: `Added ${newFriend.username} as a friend!` });
+    };
+
     const handleLeaveRoom = () => {
         socketService.disconnect();
         setTimeout(() => socketService.connect(token), 300);
@@ -207,7 +227,10 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             <div className="flex-1 flex flex-col pt-6 px-4">
                 {/* Top Bar: Profile & Mode Switcher */}
                 <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50">
+                    <div
+                        onClick={() => setActiveTab('profile')}
+                        className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50 cursor-pointer hover:bg-slate-700/80 transition-colors"
+                    >
                         <div className="relative">
                             <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold overflow-hidden">
                                 {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-amber-400">{storedUsername[0]?.toUpperCase()}</span>}
@@ -443,6 +466,77 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
         );
     };
 
+    const renderProfileTab = () => {
+        const wins = user?.stats?.wins || 0;
+        const totalGames = user?.stats?.totalGames || 0;
+        const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+
+        return (
+            <div className="flex-1 flex flex-col pt-6 px-4 pb-20 overflow-y-auto animate-in fade-in">
+                <div className="flex items-center gap-4 mb-8 pl-2">
+                    <button onClick={() => setActiveTab('home')} className="p-2 bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors">
+                        <ChevronRight size={20} className="rotate-180" />
+                    </button>
+                    <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase">Profile</h2>
+                </div>
+
+                <div className="flex flex-col items-center mb-8">
+                    <div className="relative mb-4">
+                        <div className="w-24 h-24 rounded-full bg-slate-700 flex items-center justify-center text-4xl font-bold overflow-hidden border-4 border-slate-800 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                            {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-amber-400">{storedUsername[0]?.toUpperCase()}</span>}
+                        </div>
+                        <div className="absolute -bottom-2 right-0 bg-amber-500 text-slate-900 text-sm font-black px-2 py-0.5 rounded-lg border-2 border-slate-900 shadow-lg">
+                            Lv.{Math.floor(wins / 2) + 1}
+                        </div>
+                    </div>
+                    <h1 className="text-2xl font-black text-slate-100 mb-1">{storedUsername}</h1>
+                    <p className="text-amber-400 font-bold tracking-widest uppercase text-sm">Competitor</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Rank Rating</p>
+                        <p className="text-2xl font-black text-amber-400">{user?.mmr || 1000}</p>
+                    </div>
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Win Rate</p>
+                        <p className="text-2xl font-black text-emerald-400">{winRate}%</p>
+                    </div>
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Total Wins</p>
+                        <p className="text-2xl font-black text-slate-200">{wins}</p>
+                    </div>
+                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Games Played</p>
+                        <p className="text-2xl font-black text-slate-200">{totalGames}</p>
+                    </div>
+                </div>
+
+                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-700/50 p-4 shadow-lg">
+                    <h3 className="text-slate-300 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Trophy size={14} className="text-amber-500" /> Recent Matches
+                    </h3>
+                    <div className="flex flex-col gap-2">
+                        {totalGames === 0 ? (
+                            <p className="text-slate-500 text-xs text-center p-4">No matches played yet.</p>
+                        ) : (
+                            <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs uppercase">Win</div>
+                                    <div>
+                                        <p className="text-slate-200 text-sm font-bold">Ranked Squad</p>
+                                        <p className="text-slate-500 text-[10px]">2 days ago</p>
+                                    </div>
+                                </div>
+                                <span className="text-amber-400 text-xs font-bold">+25 MMR</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderFriendsTab = () => (
         <div className="flex-1 flex flex-col pt-6 px-4 pb-20">
             <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase mb-4 pl-2">Social</h2>
@@ -450,10 +544,27 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700/50 flex-1 flex flex-col overflow-hidden shadow-xl mb-4">
                 <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
                     <span className="text-slate-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2"><Users size={16} className="text-amber-400" /> Friends Online</span>
-                    <button className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 py-1.5 px-3 rounded-lg border border-emerald-500/30 transition-colors">
-                        <UserPlus size={14} /> Add Friend
+                    <button onClick={() => setShowAddFriend(!showAddFriend)} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase py-1.5 px-3 rounded-lg border transition-colors ${showAddFriend ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30'}`}>
+                        <UserPlus size={14} /> {showAddFriend ? 'Cancel' : 'Add Friend'}
                     </button>
                 </div>
+
+                {showAddFriend && (
+                    <div className="p-3 bg-slate-800/80 border-b border-slate-700/50">
+                        <form onSubmit={handleAddFriend} className="flex gap-2">
+                            <input
+                                type="text"
+                                value={addFriendInput}
+                                onChange={(e) => setAddFriendInput(e.target.value)}
+                                placeholder="Enter Username"
+                                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-amber-500/50 transition-colors"
+                                autoFocus
+                            />
+                            <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl transition-colors">ADD</button>
+                        </form>
+                    </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
                     {friends.length === 0 ? (
                         <p className="text-slate-600 text-sm text-center p-8">No friends online</p>
@@ -548,16 +659,28 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     )}
                 </div>
 
-                {/* Game Rules Container */}
+                {/* Game & device Settings Container */}
                 <div className="space-y-2 pt-2 border-t border-slate-700/50">
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3">Game Rules</p>
-                    <label className="flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
                         <span className="text-sm font-bold text-slate-300">Roll on Capture</span>
                         <input type="checkbox" checked={bonusOnCapture} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnCapture: e.target.checked } })} className="accent-amber-500 w-5 h-5 cursor-pointer scale-110" />
                     </label>
-                    <label className="flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
                         <span className="text-sm font-bold text-slate-300">Roll on Home</span>
                         <input type="checkbox" checked={bonusOnEntry} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnEntry: e.target.checked } })} className="accent-amber-500 w-5 h-5 cursor-pointer scale-110" />
+                    </label>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-700/50">
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3">Device Settings</p>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
+                        <span className="text-sm font-bold text-slate-300">Sound Effects</span>
+                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Sound ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-amber-500 w-5 h-5 cursor-pointer border-none scale-110" />
+                    </label>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
+                        <span className="text-sm font-bold text-slate-300">Haptic Vibration</span>
+                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Vibration ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-amber-500 w-5 h-5 cursor-pointer border-none scale-110" />
                     </label>
                 </div>
 
@@ -625,6 +748,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                 {activeTab === 'home' && renderHomeTab()}
                 {activeTab === 'friends' && renderFriendsTab()}
                 {activeTab === 'settings' && renderSettingsTab()}
+                {activeTab === 'profile' && renderProfileTab()}
                 {activeTab === 'rank' && <LeaderboardScreen isEmbedded={true} />}
             </div>
 

@@ -83,7 +83,7 @@ const App = () => {
   const {
     logMessage, availableMoves, currentPlayerIdx, gameState,
     gameMode, isOnline, roomCode, connectedPlayers, rollResult,
-    isPaused, pauseCount, playerCount, botPlayers, activePlayers
+    isPaused, pauseCount, playerCount, botPlayers, activePlayers, currentTurnRolls
   } = useSelector(s => s.game);
   const fullGameState = useSelector(s => s.game);
 
@@ -155,7 +155,8 @@ const App = () => {
     <OrientationLock>
       <div className="fixed inset-0 w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden" style={{ height: '100dvh' }}>
         <GameHeader availableMoves={availableMoves} playerLabel={playerLabel} accentColor={accentColor}
-          rollResult={rollResult} isPaused={isPaused} onExit={() => setShowExitConfirm(true)} />
+          rollResult={rollResult} isPaused={isPaused} onExit={() => setShowExitConfirm(true)}
+          currentTurnRolls={currentTurnRolls} />
 
         <main className={`flex-1 flex flex-col items-center justify-center px-2 gap-1 overflow-hidden transition-opacity duration-300 ${isPaused ? 'opacity-30 pointer-events-none select-none' : 'opacity-100'}`}>
           {/* Top yards */}

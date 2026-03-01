@@ -44,9 +44,11 @@ const initialState = {
     pauseCount: 0,
 
     // Game settings
-    boardTheme: 'classic',
+    boardTheme: 'light',
     bonusOnCapture: true,
     bonusOnEntry: true,
+
+    currentTurnRolls: [], // Track sequence of rolls for the current turn
 
     // Multiplayer
     gameMode: 'MENU',         // MENU | BOTS | LOCAL | ONLINE | FRIENDS
@@ -86,6 +88,7 @@ export const gameSlice = createSlice({
 
             const isHighRoll = (moveValue === 4 || moveValue === 8);
             state.rollResult = { sticks, value: moveValue };
+            state.currentTurnRolls.push(moveValue);
 
             // Three consecutive high rolls → bust (forfeit turn)
             if (isHighRoll) {
@@ -96,6 +99,7 @@ export const gameSlice = createSlice({
                     state.consecutiveHighRolls = 0;
                     state.currentPlayerIdx = getNextTurnIdx(state.currentPlayerIdx, state.activePlayers);
                     state.gameState = 'ROLLING';
+                    state.currentTurnRolls = [];
                     state.logMessage += ` ${PLAYER_NAMES[getCurrentPlayer(state)]}'s turn.`;
                     state.validMoves = [];
                     return;
@@ -120,6 +124,7 @@ export const gameSlice = createSlice({
                 state.availableMoves = [];
                 state.currentPlayerIdx = getNextTurnIdx(state.currentPlayerIdx, state.activePlayers);
                 state.gameState = 'ROLLING';
+                state.currentTurnRolls = [];
                 state.logMessage += ` ${PLAYER_NAMES[getCurrentPlayer(state)]}'s turn.`;
                 state.validMoves = [];
             }
@@ -135,6 +140,7 @@ export const gameSlice = createSlice({
                 state.availableMoves = [];
                 state.currentPlayerIdx = getNextTurnIdx(state.currentPlayerIdx, state.activePlayers);
                 state.gameState = 'ROLLING';
+                state.currentTurnRolls = [];
                 state.consecutiveHighRolls = 0;
             } else {
                 state.gameState = 'NORMAL_MOVING';
@@ -212,6 +218,7 @@ export const gameSlice = createSlice({
                     // Normal turn end → next player
                     state.currentPlayerIdx = getNextTurnIdx(state.currentPlayerIdx, state.activePlayers);
                     state.gameState = 'ROLLING';
+                    state.currentTurnRolls = [];
                     state.consecutiveHighRolls = 0;
                     state.logMessage = `${PLAYER_NAMES[getCurrentPlayer(state)]}'s turn.`;
                     state.validMoves = [];
@@ -225,6 +232,7 @@ export const gameSlice = createSlice({
                 state.availableMoves = [];
                 state.currentPlayerIdx = getNextTurnIdx(state.currentPlayerIdx, state.activePlayers);
                 state.gameState = 'ROLLING';
+                state.currentTurnRolls = [];
                 state.consecutiveHighRolls = 0;
                 state.logMessage = `No more valid moves. ${PLAYER_NAMES[getCurrentPlayer(state)]}'s turn.`;
                 state.validMoves = [];

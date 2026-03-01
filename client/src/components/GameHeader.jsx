@@ -9,7 +9,7 @@ import { LogOut, Pause, Play } from 'lucide-react';
 
 const GameHeader = ({
     availableMoves, playerLabel, accentColor,
-    rollResult, isPaused, onExit
+    rollResult, isPaused, onExit, currentTurnRolls
 }) => {
     const dispatch = useDispatch();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -23,20 +23,24 @@ const GameHeader = ({
                 ))}
             </div>
 
-            {/* Current turn + last roll */}
+            {/* Current turn + roll history */}
             <div className="flex flex-col items-center gap-0.5">
                 <div className="flex items-center gap-2">
                     <span className="text-slate-500 text-[10px] uppercase tracking-widest hidden sm:inline">Turn</span>
                     <span className="text-sm sm:text-base font-black uppercase tracking-widest" style={{ color: accentColor }}>{playerLabel}</span>
                 </div>
-                {rollResult && (
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] text-slate-500 uppercase tracking-widest">Last roll</span>
-                        <span className={`text-xs font-black px-2 py-0.5 rounded-full border ${rollResult.value === 4 || rollResult.value === 8
-                            ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                            : 'bg-slate-700 border-slate-600 text-slate-200'}`}>
-                            {rollResult.value === 8 ? '8 — Changa!' : rollResult.value === 4 ? '4 — Chakkhan!' : rollResult.value}
-                        </span>
+                {currentTurnRolls && currentTurnRolls.length > 0 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto max-w-[150px] sm:max-w-full scrollbar-none pb-1">
+                        <span className="text-[9px] text-slate-500 uppercase tracking-widest shrink-0">Rolls</span>
+                        <div className="flex gap-1">
+                            {currentTurnRolls.map((val, idx) => (
+                                <span key={idx} className={`text-xs font-black px-2 py-0.5 rounded-full border shrink-0 ${val === 4 || val === 8
+                                    ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                                    : 'bg-slate-700 border-slate-600 text-slate-200'}`}>
+                                    {val === 8 ? '8 — Changa!' : val === 4 ? '4 — Chakkhan!' : val}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

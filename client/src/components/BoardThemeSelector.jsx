@@ -8,40 +8,28 @@ import React from 'react';
 
 const BOARD_THEMES = [
     {
-        key: 'classic',
-        name: 'Classic',
-        desc: 'Warm & traditional',
+        key: 'light',
+        name: 'Light (High Vis)',
+        desc: 'Crisp & high contrast',
         colors: {
-            board: '#fef3c7',
-            cell: '#fde68a',
-            accent: '#f59e0b',
-            glow: 'rgba(245,158,11,0.3)',
+            board: '#ffffff',
+            cell: '#f1f5f9',
+            accent: '#3b82f6',
+            glow: 'rgba(59,130,246,0.3)',
         },
-        preview: ['#fef3c7', '#fde68a', '#fbbf24', '#f8fafc'],
+        preview: ['#ffffff', '#f1f5f9', '#3b82f6', '#e2e8f0'],
     },
     {
         key: 'dark',
-        name: 'Dark Fortress',
-        desc: 'Sleek & modern',
+        name: 'Dark (Neon Vis)',
+        desc: 'Sleek & vibrant',
         colors: {
-            board: '#1e293b',
-            cell: '#334155',
-            accent: '#64748b',
-            glow: 'rgba(100,116,139,0.3)',
+            board: '#0f172a',
+            cell: '#1e293b',
+            accent: '#8b5cf6',
+            glow: 'rgba(139,92,246,0.4)',
         },
-        preview: ['#1e293b', '#334155', '#475569', '#0f172a'],
-    },
-    {
-        key: 'royal',
-        name: 'Royal Gold',
-        desc: 'Premium & bold',
-        colors: {
-            board: '#1c1917',
-            cell: '#292524',
-            accent: '#d4a017',
-            glow: 'rgba(212,160,23,0.3)',
-        },
-        preview: ['#1c1917', '#292524', '#d4a017', '#44403c'],
+        preview: ['#0f172a', '#1e293b', '#8b5cf6', '#020617'],
     },
 ];
 

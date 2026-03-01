@@ -10,8 +10,9 @@
  *  - AuthScreen.jsx   → login/register
  *  - ProfileScreen / FriendsPanel / LeaderboardScreen → social screens
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { RotateCw } from 'lucide-react';
 import Board from './components/Board';
 import PlayerYard from './components/PlayerYard';
 import ObjectSticks from './components/Sticks';
@@ -31,6 +32,40 @@ import { executeBotTurn } from './utils/botAI';
 const PLAYERS = ['p1', 'p2', 'p3', 'p4'];
 const PLAYER_NAMES = { p1: 'Red', p2: 'Blue', p3: 'Yellow', p4: 'Green' };
 const PLAYER_COLORS = { p1: '#ef4444', p2: '#3b82f6', p3: '#facc15', p4: '#22c55e' };
+
+const OrientationLock = ({ children }) => {
+  const [isPortrait, setIsPortrait] = useState(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      // If height is greater than width, we are in portrait mode
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
+
+  if (isPortrait) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center text-slate-100 p-6 select-none" style={{ height: '100dvh' }}>
+        <RotateCw size={64} className="text-amber-500 mb-6 animate-spin" style={{ animationDuration: '3s' }} />
+        <h1 className="cinzel-font text-2xl font-black text-amber-400 mb-2 tracking-widest uppercase text-center">Rotate Device</h1>
+        <p className="text-slate-400 text-center text-sm max-w-xs leading-relaxed">
+          Please rotate your device to landscape mode for the best experience.
+        </p>
+      </div>
+    );
+  }
+
+  return children;
+};
 
 const App = () => {
   const dispatch = useDispatch();
@@ -95,64 +130,68 @@ const App = () => {
   };
 
   // ── Render gates ──
-  if (isLoading) return <LoadingScreen onComplete={() => setIsLoading(false)} />;
-  if (!isAuthenticated && !authLoading) return <AuthScreen />;
+  if (isLoading) return <OrientationLock><LoadingScreen onComplete={() => setIsLoading(false)} /></OrientationLock>;
+  if (!isAuthenticated && !authLoading) return <OrientationLock><AuthScreen /></OrientationLock>;
   if (authLoading) return (
-    <div className="fixed inset-0 bg-slate-900 flex items-center justify-center" style={{ height: '100dvh' }}>
-      <span className="text-amber-400 animate-pulse text-sm">Loading…</span>
-    </div>
+    <OrientationLock>
+      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center" style={{ height: '100dvh' }}>
+        <span className="text-amber-400 animate-pulse text-sm">Loading…</span>
+      </div>
+    </OrientationLock>
   );
 
   // Overlay screens
-  if (screen === 'profile') return <ProfileScreen onBack={() => setScreen(null)} />;
-  if (screen === 'friends') return <FriendsPanel onBack={() => setScreen(null)} />;
-  if (screen === 'leaderboard') return <LeaderboardScreen onBack={() => setScreen(null)} />;
+  if (screen === 'profile') return <OrientationLock><ProfileScreen onBack={() => setScreen(null)} /></OrientationLock>;
+  if (screen === 'friends') return <OrientationLock><FriendsPanel onBack={() => setScreen(null)} /></OrientationLock>;
+  if (screen === 'leaderboard') return <OrientationLock><LeaderboardScreen onBack={() => setScreen(null)} /></OrientationLock>;
 
   // Unified Lobby (replaces MainMenu and Matchmaking Lobby)
   if (gameMode === 'MENU' || gameMode === 'FRIENDS' || (isOnline && connectedPlayers.length < playerCount)) {
-    return <UnifiedLobby onProfile={() => setScreen('profile')} onLeaderboard={() => setScreen('leaderboard')} />;
+    return <OrientationLock><UnifiedLobby onProfile={() => setScreen('profile')} onLeaderboard={() => setScreen('leaderboard')} /></OrientationLock>;
   }
 
   // ── GAME SCREEN ──
   return (
-    <div className="fixed inset-0 w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden" style={{ height: '100dvh' }}>
-      <GameHeader availableMoves={availableMoves} playerLabel={playerLabel} accentColor={accentColor}
-        rollResult={rollResult} isPaused={isPaused} onExit={() => setShowExitConfirm(true)} />
+    <OrientationLock>
+      <div className="fixed inset-0 w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden" style={{ height: '100dvh' }}>
+        <GameHeader availableMoves={availableMoves} playerLabel={playerLabel} accentColor={accentColor}
+          rollResult={rollResult} isPaused={isPaused} onExit={() => setShowExitConfirm(true)} />
 
-      <main className={`flex-1 flex flex-col items-center justify-center px-2 gap-1 overflow-hidden transition-opacity duration-300 ${isPaused ? 'opacity-30 pointer-events-none select-none' : 'opacity-100'}`}>
-        {/* Top yards */}
-        <div className="w-full flex justify-between px-1 shrink-0" style={{ maxWidth: 'min(520px, 90vw)' }}>
-          {activePlayers.includes('p3') && <PlayerYard player="p3" />}
-          {activePlayers.includes('p2') && <PlayerYard player="p2" />}
-        </div>
+        <main className={`flex-1 flex flex-col items-center justify-center px-2 gap-1 overflow-hidden transition-opacity duration-300 ${isPaused ? 'opacity-30 pointer-events-none select-none' : 'opacity-100'}`}>
+          {/* Top yards */}
+          <div className="w-full flex justify-between px-1 shrink-0" style={{ maxWidth: 'min(520px, 90vw)' }}>
+            {activePlayers.includes('p3') && <PlayerYard player="p3" />}
+            {activePlayers.includes('p2') && <PlayerYard player="p2" />}
+          </div>
 
-        {/* Board */}
-        <div className="relative shrink-0" style={{
-          width: 'min(90vw, calc(100dvh - 220px))', height: 'min(90vw, calc(100dvh - 220px))',
-          maxWidth: '520px', maxHeight: '520px',
-        }}>
-          <Board />
-          {displayMessage && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-              <div className="bg-slate-900/90 border border-slate-600 text-white px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md animate-[toastFade_2s_ease_forwards] text-center max-w-[80%]">
-                <span className="text-base sm:text-lg font-bold tracking-wide">{displayMessage}</span>
+          {/* Board */}
+          <div className="relative shrink-0" style={{
+            width: 'min(90vw, calc(100dvh - 220px))', height: 'min(90vw, calc(100dvh - 220px))',
+            maxWidth: '520px', maxHeight: '520px',
+          }}>
+            <Board />
+            {displayMessage && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+                <div className="bg-slate-900/90 border border-slate-600 text-white px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md animate-[toastFade_2s_ease_forwards] text-center max-w-[80%]">
+                  <span className="text-base sm:text-lg font-bold tracking-wide">{displayMessage}</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Bottom yards */}
-        <div className="w-full flex justify-between px-1 shrink-0" style={{ maxWidth: 'min(520px, 90vw)' }}>
-          {activePlayers.includes('p4') && <PlayerYard player="p4" />}
-          {activePlayers.includes('p1') && <PlayerYard player="p1" />}
-        </div>
-      </main>
+          {/* Bottom yards */}
+          <div className="w-full flex justify-between px-1 shrink-0" style={{ maxWidth: 'min(520px, 90vw)' }}>
+            {activePlayers.includes('p4') && <PlayerYard player="p4" />}
+            {activePlayers.includes('p1') && <PlayerYard player="p1" />}
+          </div>
+        </main>
 
-      <ObjectSticks />
-      {showExitConfirm && <ExitConfirm onStay={() => setShowExitConfirm(false)} onExit={exitToMenu} />}
-      {isPaused && <PauseOverlay pauseCount={pauseCount} />}
-      {gameState === 'GAME_OVER' && <VictoryScreen playerLabel={playerLabel} accentColor={accentColor} onPlayAgain={exitToMenu} />}
-    </div>
+        <ObjectSticks />
+        {showExitConfirm && <ExitConfirm onStay={() => setShowExitConfirm(false)} onExit={exitToMenu} />}
+        {isPaused && <PauseOverlay pauseCount={pauseCount} />}
+        {gameState === 'GAME_OVER' && <VictoryScreen playerLabel={playerLabel} accentColor={accentColor} onPlayAgain={exitToMenu} />}
+      </div>
+    </OrientationLock>
   );
 };
 

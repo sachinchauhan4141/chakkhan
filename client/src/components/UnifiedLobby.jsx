@@ -9,7 +9,7 @@ import socketService from '../services/socket';
 import LobbyPlayerCard from './LobbyPlayerCard';
 import BoardThemeSelector from './BoardThemeSelector';
 import LeaderboardScreen from './LeaderboardScreen';
-import { Settings, LogOut, Users, UserPlus, MessageCircle, Send, Trophy, Star, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Settings, LogOut, Users, UserPlus, MessageCircle, Send, Trophy, Star, ChevronLeft, ChevronRight, X, User, Moon, Sun, Monitor, HelpCircle, Gamepad2 } from 'lucide-react';
 import { logout } from '../store/authSlice';
 
 const API = import.meta.env.PROD ? '' : 'http://localhost:3001';
@@ -259,20 +259,87 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                         })}
                     </div>
 
+                    {/* --- Matchmaking Configuration --- */}
+                    <div className="mx-6 mt-4 mb-2 bg-slate-800/60 backdrop-blur-md rounded-2xl border border-slate-700/50 p-3 shadow-xl flex flex-col gap-3 relative z-10 pointer-events-auto">
+                        {/* Theme Selector (Mini) */}
+                        <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Monitor size={12} /> Theme</span>
+                            <div className="flex gap-2">
+                                <button onClick={() => dispatch(setBoardTheme('light'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'light' ? 'bg-amber-100 border-amber-500 text-amber-600 shadow-md' : 'bg-slate-700 border-slate-600 text-slate-400'}`}><Sun size={12} /></button>
+                                <button onClick={() => dispatch(setBoardTheme('dark'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'dark' ? 'bg-slate-900 border-amber-500 text-amber-500 shadow-md' : 'bg-slate-700 border-slate-600 text-slate-400'}`}><Moon size={12} /></button>
+                            </div>
+                        </div>
+
+                        {lobbyMode === 'OFFLINE' ? (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex bg-slate-900/50 rounded-xl p-1 shadow-inner h-8">
+                                    {['BOTS', 'LOCAL'].map(t => (
+                                        <button key={t} onClick={() => setOfflineType(t)}
+                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${offlineType === t ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
+                                            {t === 'BOTS' ? 'VS BOTS' : 'PASS & PLAY'}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Squad</span>
+                                    <div className="flex gap-1.5">
+                                        {[2, 3, 4].map(n => (
+                                            <button key={n} onClick={() => setPlayerCount(n)}
+                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border border-slate-700 ${playerCount === n ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                                                <div className="flex justify-center flex-wrap gap-[2px] w-[18px]">
+                                                    {Array(n).fill(0).map((_, i) => <User key={i} size={8} strokeWidth={3} />)}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex bg-slate-900/50 rounded-xl p-1 shadow-inner h-8">
+                                    {['PUBLIC', 'PRIVATE'].map(t => (
+                                        <button key={t} onClick={() => { setMatchType(t); if (roomCode) handleLeaveRoom(); }}
+                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${matchType === t ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
+                                            {t === 'PUBLIC' ? 'RANKED' : 'ROOM'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Squad Size / Action Row */}
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Team</span>
+                                    <div className="flex gap-1.5">
+                                        {[2, 3, 4].map(n => (
+                                            <button key={n} onClick={() => { if (!roomCode) setPlayerCount(n); }}
+                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border border-slate-700 ${playerCount === n ? 'bg-blue-500 text-white border-blue-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'} ${roomCode ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                <div className="flex justify-center flex-wrap gap-[2px] w-[18px]">
+                                                    {Array(n).fill(0).map((_, i) => <User key={i} size={8} strokeWidth={3} />)}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Join Code Display (Private Online) */}
                     {lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !roomCode && (
-                        <div className="w-full max-w-[320px] flex gap-2 mt-2">
-                            <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="ENTER CODE" maxLength={6}
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-amber-400 outline-none" />
+                        <div className="mx-6 w-full max-w-[320px] flex gap-2 mt-2 self-center">
+                            <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ENTER CODE" maxLength={6}
+                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-amber-400 outline-none placeholder:text-slate-500" />
                             <button onClick={handleJoinPrivate} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl">JOIN</button>
                         </div>
                     )}
                     {lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && (
-                        <div className="w-full max-w-[320px] text-center bg-slate-800/50 py-3 rounded-2xl border border-slate-700 mt-2">
+                        <div className="mx-6 w-full max-w-[320px] text-center bg-slate-800/50 py-3 rounded-2xl border border-slate-700 mt-2 self-center cursor-pointer active:scale-95 transition-transform" onClick={() => {
+                            navigator.clipboard.writeText(roomCode);
+                            dispatch({ type: 'game/addLog', payload: 'Code copied!' });
+                        }}>
                             <p className="text-[10px] text-slate-500 mb-1">ROOM CODE</p>
                             <div className="flex justify-center items-center gap-4">
                                 <p className="text-2xl font-black text-amber-400 tracking-[0.3em]">{roomCode}</p>
-                                <button onClick={handleLeaveRoom} className="text-red-400 hover:text-red-300"><LogOut size={16} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleLeaveRoom(); }} className="text-red-400 hover:text-red-300 p-2"><LogOut size={16} /></button>
                             </div>
                         </div>
                     )}
@@ -380,64 +447,27 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase mb-6 pl-2">Settings</h2>
 
             <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl border border-slate-700/50 p-5 shadow-xl space-y-8">
-                {/* Theme Selector Section */}
-                <div>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">Board Theme</p>
-                    <BoardThemeSelector selectedTheme={boardTheme} onSelect={t => dispatch(setBoardTheme(t))} miniMode={true} />
-                </div>
-
-                {/* Matchmaking Configuration */}
-                <div>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-4">Configurations</p>
-
-                    {lobbyMode === 'OFFLINE' ? (
-                        <div className="space-y-4">
-                            <div className="flex bg-slate-800 rounded-xl p-1 shadow-inner">
-                                {['BOTS', 'LOCAL'].map(t => (
-                                    <button key={t} onClick={() => setOfflineType(t)}
-                                        className={`flex-1 py-2 text-xs font-bold tracking-wider rounded-lg transition ${offlineType === t ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-slate-300 font-semibold px-1">
-                                <span>Squad Size</span>
-                                <div className="flex gap-2">
-                                    {[2, 3, 4].map(n => (
-                                        <button key={n} onClick={() => setPlayerCount(n)}
-                                            className={`w-10 h-10 rounded-xl font-black text-lg transition flex items-center justify-center border border-slate-700
-                                            ${playerCount === n ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
-                                            {n}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex bg-slate-800 rounded-xl p-1 shadow-inner">
-                                {['PUBLIC', 'PRIVATE'].map(t => (
-                                    <button key={t} onClick={() => { setMatchType(t); if (roomCode) handleLeaveRoom(); }}
-                                        className={`flex-1 py-2 text-xs font-bold tracking-wider rounded-lg transition ${matchType === t ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
-                                        {t === 'PUBLIC' ? 'Matchmaking' : 'Custom Room'}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-slate-300 font-semibold px-1">
-                                <span>Team Size</span>
-                                <div className="flex gap-2">
-                                    {[2, 3, 4].map(n => (
-                                        <button key={n} onClick={() => { if (!roomCode) setPlayerCount(n); }}
-                                            className={`w-10 h-10 rounded-xl font-black text-lg transition flex items-center justify-center border border-slate-700
-                                            ${playerCount === n ? 'bg-blue-500 text-white border-blue-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'} 
-                                            ${roomCode ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                            {n}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                {/* Game Guide Container */}
+                <div className="space-y-3">
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2"><HelpCircle size={14} /> How to Play</p>
+                    <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/30 text-sm text-slate-300 space-y-3 shadow-inner">
+                        <p className="flex items-start gap-2">
+                            <span className="text-amber-500 mt-0.5"><Star size={14} /></span>
+                            <span><strong>Goal:</strong> Be the first to move all your pieces to the center home zone. The game continues until only one player remains!</span>
+                        </p>
+                        <p className="flex items-start gap-2">
+                            <span className="text-red-400 mt-0.5"><Gamepad2 size={14} /></span>
+                            <span><strong>Rolls:</strong> Roll the dice to move. Rolling a <strong className="text-amber-400">4</strong> or an <strong className="text-amber-400">8</strong> grants you an extra bonus roll!</span>
+                        </p>
+                        <p className="flex items-start gap-2">
+                            <span className="text-blue-400 mt-0.5"><X size={14} /></span>
+                            <span><strong>Captures:</strong> Landing exactly on an opponent's piece sends it back to base. You also earn a bonus roll!</span>
+                        </p>
+                        <p className="flex items-start gap-2">
+                            <span className="text-emerald-400 mt-0.5"><Monitor size={14} /></span>
+                            <span><strong>Safe Zones:</strong> Crossed cells are Safe Zones. Pieces cannot be captured while resting on these squares.</span>
+                        </p>
+                    </div>
                 </div>
 
                 {/* Game Rules Container */}
@@ -464,28 +494,41 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     );
 
     // Bottom Navigation Dock
-    const renderBottomDock = () => (
-        <div className="absolute bottom-0 left-0 right-0 h-[72px] bg-slate-900 border-t border-slate-800/80 z-50 px-2 sm:px-6 flex justify-around items-center pb-2" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}>
-            {[
-                { id: 'home', icon: Star, label: 'Play' },
-                { id: 'friends', icon: Users, label: 'Friends' },
-                { id: 'rank', icon: Trophy, label: 'Rank' },
-                { id: 'settings', icon: Settings, label: 'Settings' }
-            ].map(tab => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                    <button key={tab.id}
-                        onClick={() => tab.action ? tab.action() : setActiveTab(tab.id)}
-                        className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors relative ${isActive ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}>
-                        <Icon size={24} className={isActive ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
-                        <span className="text-[10px] font-bold tracking-wider">{tab.label}</span>
-                        {isActive && <div className="absolute -top-px w-10 h-1 bg-amber-500 rounded-b-full shadow-[0_2px_8px_rgba(245,158,11,0.8)]" />}
-                    </button>
-                );
-            })}
-        </div>
-    );
+    const renderBottomDock = () => {
+        const onlineFriendsCount = friends.filter(f => f.isOnline).length;
+
+        return (
+            <div className="absolute bottom-0 left-0 right-0 h-[72px] bg-slate-900 border-t border-slate-800/80 z-50 px-2 sm:px-6 flex justify-around items-center pb-2" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}>
+                {[
+                    { id: 'home', icon: Star, label: 'Play' },
+                    { id: 'friends', icon: Users, label: 'Friends', badge: onlineFriendsCount > 0 ? onlineFriendsCount : null },
+                    { id: 'rank', icon: Trophy, label: 'Rank', badge: user?.mmr ? Math.floor(user.mmr / 100) / 10 + 'k' : null },
+                    { id: 'settings', icon: Settings, label: 'Settings' }
+                ].map(tab => {
+                    const isActive = activeTab === tab.id;
+                    const Icon = tab.icon;
+                    return (
+                        <button key={tab.id}
+                            onClick={() => tab.action ? tab.action() : setActiveTab(tab.id)}
+                            className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors relative ${isActive ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}>
+
+                            <div className="relative">
+                                <Icon size={24} className={isActive ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
+                                {tab.badge && (
+                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border border-slate-900 shadow-sm">
+                                        {tab.badge}
+                                    </div>
+                                )}
+                            </div>
+
+                            <span className="text-[10px] font-bold tracking-wider">{tab.label}</span>
+                            {isActive && <div className="absolute -top-px w-10 h-1 bg-amber-500 rounded-b-full shadow-[0_2px_8px_rgba(245,158,11,0.8)]" />}
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    };
 
     return (
         <div className="fixed inset-0 w-full h-full bg-slate-900 overflow-hidden flex flex-col font-sans select-none text-slate-100 pb-[72px]">

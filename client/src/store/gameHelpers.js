@@ -85,11 +85,14 @@ export const calculateAllValidMoves = (state) => {
                     const wouldCrossGateway = isOnOuterRing && tentativeTarget >= INNER_RING_START;
 
                     if (wouldCrossGateway) {
-                        // Must be at gateway AND have captured to enter inner ring
-                        if (currentPos === OUTER_RING_END && state.hasCaptured[player]) {
+                        if (state.hasCaptured[player]) {
+                            // Player has captured, allow them to smoothly enter the inner ring
                             targetPos = tentativeTarget;
+                        } else {
+                            // Player hasn't captured, they loop the outer ring (pos 1-15)
+                            // subtract 15 to wrap back to the start of the outer path (e.g. 16 -> 1, 17 -> 2)
+                            targetPos = tentativeTarget - OUTER_RING_END;
                         }
-                        // Otherwise blocked
                     } else {
                         targetPos = tentativeTarget;
                     }

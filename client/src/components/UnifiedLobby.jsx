@@ -40,6 +40,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     // --- UI Toggle State ---
     const [activeTab, setActiveTab] = useState('home'); // 'home' | 'friends' | 'rank' | 'settings'
     const [showRules, setShowRules] = useState(false);
+    const [showStartModal, setShowStartModal] = useState(false);
 
     // --- Social State ---
     const [friends, setFriends] = useState([]);
@@ -116,6 +117,30 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     // --- Actions ---
     const handleStart = () => {
         if (lobbyMode === 'OFFLINE') {
+            setShowStartModal(true);
+        } else if (lobbyMode === 'ONLINE') {
+            if (matchType === 'PUBLIC') {
+                if (isSearching) {
+                    // Cancel Search
+                    socketService.disconnect();
+                    setTimeout(() => socketService.connect(token), 300);
+                    setIsSearching(false);
+                } else {
+                    setShowStartModal(true);
+                }
+            } else if (matchType === 'PRIVATE') {
+                if (!roomCode) {
+                    socketService.createPrivateRoom({ username: storedUsername, playerCount }); // Create Room bypasses modal
+                } else if (isHost && allReady) {
+                    setShowStartModal(true);
+                }
+            }
+        }
+    };
+
+    const handleConfirmStart = () => {
+        setShowStartModal(false);
+        if (lobbyMode === 'OFFLINE') {
             // Start Local/Bot Game immediately
             const activePlayers = playerCount === 2 && colorPair === 'BG' ? ['p2', 'p4'] :
                 playerCount === 2 ? ['p1', 'p3'] :
@@ -136,18 +161,10 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             dispatch(resetGame());
         } else if (lobbyMode === 'ONLINE') {
             if (matchType === 'PUBLIC') {
-                if (isSearching) {
-                    socketService.disconnect();
-                    setTimeout(() => socketService.connect(token), 300);
-                    setIsSearching(false);
-                } else {
-                    setIsSearching(true);
-                    socketService.joinMatchmaking({ username: storedUsername, playerCount });
-                }
+                setIsSearching(true);
+                socketService.joinMatchmaking({ username: storedUsername, playerCount });
             } else if (matchType === 'PRIVATE') {
-                if (!roomCode) {
-                    socketService.createPrivateRoom({ username: storedUsername, playerCount });
-                } else if (isHost && allReady) {
+                if (isHost && allReady) {
                     socketService.startGame(roomCode);
                 }
             }
@@ -231,33 +248,44 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4 w-full max-w-[320px]">
-                        {slots.map((_, i) => {
-                            let player;
-                            if (lobbyMode === 'ONLINE' && roomCode) player = connectedPlayers[i];
-                            else if (lobbyMode === 'OFFLINE' || lobbyMode === 'ONLINE') {
-                                if (i === 0) player = { username: storedUsername, role: 'p1', mmr: user?.mmr };
-                                else if (lobbyMode === 'OFFLINE' && offlineType === 'BOTS') player = { username: `Bot ${i}`, role: `p${i + 1}`, isBot: true };
-                                else if (lobbyMode === 'OFFLINE' && offlineType === 'LOCAL') player = { username: `Player ${i + 1}`, role: `p${i + 1}`, isLocal: true };
-                            }
-                            const isEmpty = !player;
-                            const showInvite = isEmpty && lobbyMode === 'ONLINE' && matchType === 'PRIVATE';
-                            return (
-                                <div key={i} className="aspect-[3/4] w-full max-w-[105px] mx-auto">
-                                    <LobbyPlayerCard
-                                        player={player}
-                                        isEmpty={isEmpty}
-                                        isYou={i === 0}
-                                        isHost={i === 0 || (player && player.role === 'p1')}
-                                        isReady={player && readyPlayers.has(player.role)}
-                                        index={i}
-                                        onInvite={() => { }}
-                                        overrideEmpty={showInvite ? 'INVITE' : 'EMPTY'}
-                                        scale={1} // Fill container
-                                    />
-                                </div>
-                            );
-                        })}
+                    {/* Player Cards: Horizontal Scroll */}
+                    <div className="w-full max-w-[400px] flex flex-col items-center gap-2">
+                        <div className="w-full flex justify-between items-center px-6">
+                            <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Squad Roster</span>
+                            <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest">
+                                {connectedPlayers.length || slots.length}/{slots.length} Ready
+                            </span>
+                        </div>
+
+                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 w-full px-6 pb-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {slots.map((_, i) => {
+                                let player;
+                                if (lobbyMode === 'ONLINE' && roomCode) player = connectedPlayers[i];
+                                else if (lobbyMode === 'OFFLINE' || lobbyMode === 'ONLINE') {
+                                    if (i === 0) player = { username: storedUsername, role: 'p1', mmr: user?.mmr };
+                                    else if (lobbyMode === 'OFFLINE' && offlineType === 'BOTS') player = { username: `Bot ${i}`, role: `p${i + 1}`, isBot: true };
+                                    else if (lobbyMode === 'OFFLINE' && offlineType === 'LOCAL') player = { username: `Player ${i + 1}`, role: `p${i + 1}`, isLocal: true };
+                                }
+                                const isEmpty = !player;
+                                const showInvite = isEmpty && lobbyMode === 'ONLINE' && matchType === 'PRIVATE';
+                                return (
+                                    <div key={i} className="flex-none aspect-[3/4] w-[140px] snap-center">
+                                        <LobbyPlayerCard
+                                            player={player}
+                                            isEmpty={isEmpty}
+                                            isYou={i === 0}
+                                            showInvite={showInvite}
+                                            isHost={i === 0 || (player && player.role === 'p1')}
+                                            isReady={player && readyPlayers.has(player.role)}
+                                            index={i}
+                                            onInvite={() => { }}
+                                            overrideEmpty={showInvite ? 'INVITE' : 'EMPTY'}
+                                            scale={1} // Fill container
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* --- Matchmaking Configuration --- */}
@@ -325,25 +353,29 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     </div>
 
                     {/* Join Code Display (Private Online) */}
-                    {lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !roomCode && (
-                        <div className="mx-6 w-full max-w-[320px] flex gap-2 mt-2 self-center">
-                            <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ENTER CODE" maxLength={6}
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-amber-400 outline-none placeholder:text-slate-500" />
-                            <button onClick={handleJoinPrivate} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl">JOIN</button>
-                        </div>
-                    )}
-                    {lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && (
-                        <div className="mx-6 w-full max-w-[320px] text-center bg-slate-800/50 py-3 rounded-2xl border border-slate-700 mt-2 self-center cursor-pointer active:scale-95 transition-transform" onClick={() => {
-                            navigator.clipboard.writeText(roomCode);
-                            dispatch({ type: 'game/addLog', payload: 'Code copied!' });
-                        }}>
-                            <p className="text-[10px] text-slate-500 mb-1">ROOM CODE</p>
-                            <div className="flex justify-center items-center gap-4">
-                                <p className="text-2xl font-black text-amber-400 tracking-[0.3em]">{roomCode}</p>
-                                <button onClick={(e) => { e.stopPropagation(); handleLeaveRoom(); }} className="text-red-400 hover:text-red-300 p-2"><LogOut size={16} /></button>
+                    {
+                        lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !roomCode && (
+                            <div className="mx-6 w-full max-w-[320px] flex gap-2 mt-2 self-center">
+                                <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ENTER CODE" maxLength={6}
+                                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-amber-400 outline-none placeholder:text-slate-500" />
+                                <button onClick={handleJoinPrivate} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl">JOIN</button>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
+                    {
+                        lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && (
+                            <div className="mx-6 w-full max-w-[320px] text-center bg-slate-800/50 py-3 rounded-2xl border border-slate-700 mt-2 self-center cursor-pointer active:scale-95 transition-transform" onClick={() => {
+                                navigator.clipboard.writeText(roomCode);
+                                dispatch({ type: 'game/addLog', payload: 'Code copied!' });
+                            }}>
+                                <p className="text-[10px] text-slate-500 mb-1">ROOM CODE</p>
+                                <div className="flex justify-center items-center gap-4">
+                                    <p className="text-2xl font-black text-amber-400 tracking-[0.3em]">{roomCode}</p>
+                                    <button onClick={(e) => { e.stopPropagation(); handleLeaveRoom(); }} className="text-red-400 hover:text-red-300 p-2"><LogOut size={16} /></button>
+                                </div>
+                            </div>
+                        )
+                    }
 
                     {/* Start Button */}
                     <div className="w-full max-w-[320px] mt-4 z-10">
@@ -377,6 +409,35 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                                         !isHost ? 'Waiting for host' : 'Host Action'}
                         </p>
                     </div>
+
+                    {/* Pre-Game Confirmation Modal overlay */}
+                    {showStartModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-slate-800 border-2 border-slate-600 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 overflow-hidden relative">
+                                <h3 className="text-xl font-black text-amber-500 tracking-widest uppercase mb-4 text-center">Confirm Match</h3>
+
+                                <div className="space-y-3 mb-6 bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Mode</span>
+                                        <span className="text-slate-200 font-black">{lobbyMode} {lobbyMode === 'ONLINE' ? `(${matchType})` : `(${offlineType})`}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Players</span>
+                                        <span className="text-slate-200 font-black flex items-center gap-1">{playerCount} <User size={14} /></span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Theme</span>
+                                        <span className="text-slate-200 font-black truncate max-w-[120px] text-right">{Object.entries({ 'board-neon': 'Neon Vis' }).find(([k]) => k === themeKey)?.[1] || themeKey}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowStartModal(false)} className="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold uppercase tracking-widest transition-colors">Cancel</button>
+                                    <button onClick={handleConfirmStart} className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-black uppercase tracking-widest transition-colors shadow-[0_0_15px_rgba(245,158,11,0.4)]">Confirm</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, Crown, Medal } from 'lucide-react';
+import ProfileScreen from './ProfileScreen';
 
 const API = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
@@ -11,6 +12,7 @@ const LeaderboardScreen = ({ onBack, isEmbedded }) => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
     const [myRank, setMyRank] = useState(null);
+    const [viewProfileId, setViewProfileId] = useState(null);
 
     useEffect(() => {
         // Fetch top 100
@@ -66,7 +68,8 @@ const LeaderboardScreen = ({ onBack, isEmbedded }) => {
                         const topColor = RANK_COLORS[p.rank];
                         return (
                             <div key={p.rank}
-                                className={`flex items-center px-4 py-2.5 border-b border-slate-100 transition-colors ${isMe ? 'bg-indigo-50/80' : 'hover:bg-slate-50'
+                                onClick={() => setViewProfileId(p._id)}
+                                className={`flex items-center px-4 py-2.5 border-b border-slate-100 transition-colors cursor-pointer ${isMe ? 'bg-indigo-50/80' : 'hover:bg-slate-50'
                                     }`}>
                                 <span className="w-10 text-center font-black text-sm" style={{ color: topColor || '#94a3b8' }}>
                                     {p.rank <= 3 ? <Medal size={16} style={{ color: topColor, display: 'inline' }} /> : p.rank}
@@ -88,7 +91,8 @@ const LeaderboardScreen = ({ onBack, isEmbedded }) => {
 
             {/* Persistent My Rank Banner */}
             {user && !loading && !isMeInTop100 && myRank && (
-                <div className="bg-indigo-600 text-white shadow-[0_-10px_40px_rgba(79,70,229,0.2)] border-t border-indigo-500 z-10 shrink-0">
+                <div className="bg-indigo-600 text-white shadow-[0_-10px_40px_rgba(79,70,229,0.2)] border-t border-indigo-500 z-10 shrink-0 cursor-pointer hover:bg-indigo-500 transition-colors"
+                    onClick={() => setViewProfileId(user._id)}>
                     <div className="flex items-center px-4 py-3">
                         <span className="w-10 text-center font-black text-sm text-indigo-200">{myRank}</span>
                         <div className="flex-1 min-w-0">
@@ -103,6 +107,8 @@ const LeaderboardScreen = ({ onBack, isEmbedded }) => {
                     </div>
                 </div>
             )}
+
+            {viewProfileId && <ProfileScreen onClose={() => setViewProfileId(null)} viewUserId={viewProfileId} />}
         </div>
     );
 };

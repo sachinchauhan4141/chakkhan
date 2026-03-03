@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, Search, UserPlus, Check, X, Circle } from 'lucide-react';
+import ProfileScreen from './ProfileScreen';
 
 const API = import.meta.env.PROD ? '' : 'http://localhost:3001';
 
@@ -12,6 +13,7 @@ const FriendsPanel = ({ onBack, onInvite }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [statusMsg, setStatusMsg] = useState('');
+    const [viewProfileId, setViewProfileId] = useState(null);
 
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
@@ -86,7 +88,7 @@ const FriendsPanel = ({ onBack, onInvite }) => {
                         ? <p className="text-slate-600 text-xs text-center py-8">No friends yet. Add some!</p>
                         : <div className="flex flex-col gap-1.5">
                             {friends.map(f => (
-                                <div key={f._id} className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5">
+                                <div key={f._id} onClick={() => setViewProfileId(f._id)} className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-slate-700 transition-colors">
                                     <div className="flex items-center gap-2">
                                         <div className="relative">
                                             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
@@ -102,7 +104,7 @@ const FriendsPanel = ({ onBack, onInvite }) => {
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] text-amber-400 font-bold">{f.mmr} MMR</span>
                                         {onInvite && f.isOnline && (
-                                            <button onClick={() => onInvite(f._id)}
+                                            <button onClick={(e) => { e.stopPropagation(); onInvite(f._id); }}
                                                 className="px-2 py-1 bg-amber-500/20 border border-amber-500/40 rounded-lg text-amber-400 text-[9px] font-bold uppercase hover:bg-amber-500/30 transition-colors">
                                                 Invite
                                             </button>
@@ -160,12 +162,12 @@ const FriendsPanel = ({ onBack, onInvite }) => {
 
                         <div className="flex flex-col gap-1.5">
                             {searchResults.map(u => (
-                                <div key={u._id} className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5">
+                                <div key={u._id} onClick={() => setViewProfileId(u._id)} className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-slate-700 transition-colors">
                                     <div>
                                         <p className="text-sm text-slate-200 font-semibold">{u.username}</p>
                                         <p className="text-[9px] text-slate-500 font-mono">{u.uniqueTag}</p>
                                     </div>
-                                    <button onClick={() => sendRequest(u.uniqueTag)}
+                                    <button onClick={(e) => { e.stopPropagation(); sendRequest(u.uniqueTag); }}
                                         className="p-1.5 bg-amber-500/20 border border-amber-500/40 rounded-lg hover:bg-amber-500/30 transition-colors">
                                         <UserPlus size={14} className="text-amber-400" />
                                     </button>
@@ -175,6 +177,8 @@ const FriendsPanel = ({ onBack, onInvite }) => {
                     </div>
                 )}
             </div>
+
+            {viewProfileId && <ProfileScreen onClose={() => setViewProfileId(null)} viewUserId={viewProfileId} />}
         </div>
     );
 };

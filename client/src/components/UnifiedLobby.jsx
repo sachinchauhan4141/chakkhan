@@ -9,6 +9,7 @@ import socketService from '../services/socket';
 import LobbyPlayerCard from './LobbyPlayerCard';
 import BoardThemeSelector from './BoardThemeSelector';
 import LeaderboardScreen from './LeaderboardScreen';
+import ProfileScreen from './ProfileScreen';
 import { Settings, LogOut, Users, UserPlus, MessageCircle, Send, Trophy, Star, ChevronLeft, ChevronRight, X, User, Moon, Sun, Monitor, HelpCircle, Gamepad2, Search, Check, Circle } from 'lucide-react';
 import { logout } from '../store/authSlice';
 
@@ -50,6 +51,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [statusMsg, setStatusMsg] = useState('');
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [viewProfileId, setViewProfileId] = useState(null);
 
     useEffect(() => {
         const checkFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
@@ -165,8 +167,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
             if (matchType === 'PUBLIC') {
                 if (isSearching) {
                     // Cancel Search
-                    socketService.disconnect();
-                    setTimeout(() => socketService.connect(token), 300);
+                    socketService.emit('leave_queue');
                     setIsSearching(false);
                 } else {
                     setShowStartModal(true);
@@ -351,7 +352,8 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                                             isHost={i === 0 || (player && player.role === 'p1')}
                                             isReady={player && readyPlayers.has(player.role)}
                                             index={i}
-                                            onInvite={() => { }}
+                                            onInvite={() => { setFriendsTab('friends'); setActiveTab('friends'); }}
+                                            onViewProfile={(p) => setViewProfileId(p.id)}
                                             overrideEmpty={showInvite ? 'INVITE' : 'EMPTY'}
                                             scale={1} // Fill container
                                         />
@@ -747,6 +749,9 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     </div>
                 </div>
             )}
+
+            {/* Profile Viewer Overlay */}
+            {viewProfileId && <ProfileScreen onClose={() => setViewProfileId(null)} viewUserId={viewProfileId} />}
         </div>
     );
 
@@ -797,9 +802,14 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
                         <span className="text-sm font-bold text-slate-700">Full Screen</span>
                         <input type="checkbox" checked={isFullscreen} onChange={(e) => {
-                            if (e.target.checked) document.documentElement.requestFullscreen().catch(() => { });
-                            else if (document.exitFullscreen) document.exitFullscreen();
-                        }} className="accent-indigo-500 w-5 h-5 cursor-pointer scale-110" />
+                            const wantFs = e.target.checked;
+                            localStorage.setItem('auto_fs', wantFs ? 'true' : 'false');
+                            if (wantFs) {
+                                document.documentElement.requestFullscreen().catch(() => { });
+                            } else if (document.fullscreenElement) {
+                                document.exitFullscreen().catch(() => { });
+                            }
+                        }} className="w-4 h-4 text-indigo-600 rounded bg-slate-200 border-slate-300 focus:ring-indigo-500" />
                     </label>
                 </div>
 

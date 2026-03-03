@@ -140,8 +140,7 @@ class GameManager {
         socket.to(roomCode).emit('sync_action', action);
     }
 
-    handleDisconnect(socket) {
-        // Remove from all queues
+    removeFromQueue(socket) {
         for (const key of Object.keys(this.matchmakingQueues)) {
             const queue = this.matchmakingQueues[key];
             const before = queue.length;
@@ -152,6 +151,11 @@ class GameManager {
                 });
             }
         }
+    }
+
+    handleDisconnect(socket) {
+        // Remove from all queues
+        this.removeFromQueue(socket);
 
         // Remove from rooms
         for (const [roomCode, room] of this.rooms.entries()) {

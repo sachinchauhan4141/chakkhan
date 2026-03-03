@@ -24,7 +24,7 @@ import FriendsPanel from './components/FriendsPanel';
 import LeaderboardScreen from './components/LeaderboardScreen';
 import GameHeader from './components/GameHeader';
 import { ExitConfirm, PauseOverlay, VictoryScreen } from './components/GameOverlays';
-import { resetGame, setMultiplayerState } from './store/gameSlice';
+import { resetGame, setMultiplayerState, applyMove } from './store/gameSlice';
 import { loadUser } from './store/authSlice';
 import socketService from './services/socket';
 import { executeBotTurn } from './utils/botAI';
@@ -49,7 +49,7 @@ const App = () => {
 
   // ── Game state ──
   const {
-    logMessage, availableMoves, currentPlayerIdx, gameState,
+    logMessage, availableMoves, validMoves, currentPlayerIdx, gameState,
     gameMode, isOnline, roomCode, connectedPlayers, rollResult,
     isPaused, pauseCount, playerCount, botPlayers, activePlayers, currentTurnRolls
   } = useSelector(s => s.game);
@@ -76,6 +76,21 @@ const App = () => {
     return () => window.removeEventListener('beforeunload', handler);
   }, [gameMode, gameState]);
 
+  // Auto-fullscreen on first interaction if enabled
+  const [autoFsEnabled, setAutoFsEnabled] = React.useState(localStorage.getItem('auto_fs') !== 'false');
+  React.useEffect(() => {
+    if (!autoFsEnabled) return;
+    const enterFs = () => {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => { });
+      }
+      // Remove after first attempt
+      window.removeEventListener('click', enterFs);
+    };
+    window.addEventListener('click', enterFs);
+    return () => window.removeEventListener('click', enterFs);
+  }, [autoFsEnabled]);
+
   // Online sync
   React.useEffect(() => {
     if (!isOnline) return;
@@ -98,9 +113,37 @@ const App = () => {
   // Bot turns
   React.useEffect(() => {
     if (botPlayers.length > 0 && gameState !== 'GAME_OVER') {
-      if (botPlayers.includes(currentPlayer)) executeBotTurn(fullGameState, dispatch);
+      if (botPlayers.includes(currentPlayer)) {
+        // In online play, only the first human in the lobby executes the bot
+        const firstHumanRole = fullGameState.connectedPlayers?.find(p => !p.isBot)?.role || 'p1';
+        if (isOnline && fullGameState.localPlayerRole !== firstHumanRole) return;
+        executeBotTurn(fullGameState, dispatch);
+      }
     }
-  }, [fullGameState, dispatch, botPlayers, currentPlayer, gameState]);
+  }, [fullGameState, dispatch, botPlayers, currentPlayer, gameState, isOnline]);
+
+  // Auto-move for local human players with only 1 valid move
+  React.useEffect(() => {
+    if (gameState === 'GAME_OVER' || validMoves.length !== 1 || !rollResult) return;
+
+    const isBot = botPlayers.includes(currentPlayer);
+    if (isBot) return;
+
+    let isLocalTurn = !isOnline || fullGameState.localPlayerRole === currentPlayer;
+    if (isLocalTurn) {
+      // Delay auto-move to let stick animations finish (match the Sticks.jsx hideTimer visually)
+      const t = setTimeout(() => {
+        // Double check no race conditions occurred while waiting
+        if (validMoves.length === 1) {
+          const move = { pieceIndex: validMoves[0].pieceIndex, moveValue: validMoves[0].moveValue };
+          const action = applyMove(move);
+          dispatch(action);
+          if (isOnline && roomCode) socketService.sendGameAction(roomCode, action);
+        }
+      }, 2100);
+      return () => clearTimeout(t);
+    }
+  }, [currentPlayer, validMoves, isOnline, fullGameState.localPlayerRole, botPlayers, gameState, dispatch, rollResult, roomCode]);
 
   // ── Exit action ──
   const exitToMenu = () => {

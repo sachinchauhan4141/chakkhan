@@ -66,38 +66,37 @@ const PlayerYard = ({ player }) => {
     <div
       onClick={canRoll ? handleRoll : undefined}
       className={`
-                relative flex flex-col items-center rounded-xl overflow-hidden
-                w-[100px] sm:w-[130px] md:w-[150px] 
-                bg-slate-800 border transition-all duration-200 select-none
+                relative flex flex-col items-center rounded-3xl overflow-hidden
+                w-[110px] sm:w-[140px] md:w-[160px] pb-2
+                bg-gradient-to-br from-slate-800 to-slate-900 border transition-all duration-300 select-none
                 ${isCurrentTurn
-          ? 'border-amber-500 shadow-[0_0_16px_rgba(245,158,11,0.3)] scale-105 z-20'
+          ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-105 z-20 ' + (isLocalTurn ? 'animate-[pulse_2s_ease-in-out_infinite]' : '')
           : 'border-slate-700 opacity-80 z-10'}
-                ${canRoll ? 'cursor-pointer' : 'cursor-default'}
             `}>
 
-      {/* Player color accent top bar */}
-      <div className="w-full h-1" style={{ background: c.dot }} />
+      {/* Decorative colored glow based on player color */}
+      <div className="absolute inset-0 opacity-10 blur-xl pointer-events-none" style={{ background: c.dot }} />
 
       {/* Header: name + capture dot */}
-      <div className="w-full flex items-center justify-between px-2 pt-2 pb-1">
-        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate ${c.text}`}>
+      <div className="w-full flex items-center justify-between px-4 pt-3 pb-1 relative z-10">
+        <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest truncate ${c.text} drop-shadow-md`}>
           {playerLabel}
         </span>
         <span
-          className="w-2 h-2 rounded-full shrink-0"
-          style={{ background: hasCaptured[player] ? '#ef4444' : '#475569' }}
+          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-inner"
+          style={{ background: hasCaptured[player] ? '#ef4444' : '#475569', boxShadow: hasCaptured[player] ? '0 0 8px #ef4444' : 'inset 0 2px 4px rgba(0,0,0,0.5)' }}
           title={hasCaptured[player] ? 'Has captured' : 'No capture yet'}
         />
       </div>
 
-      {/* Yard grid */}
-      <div className="flex-1 w-full px-2 pb-2 flex items-center justify-center min-h-[60px] sm:min-h-[80px]">
+      {/* Yard grid (The Nest) */}
+      <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-full bg-slate-900 border-2 border-slate-700/50 flex flex-col items-center justify-center relative z-10 shadow-inner my-1">
         {piecesInYard.length === 0 ? (
-          <span className="text-[9px] text-slate-600 uppercase tracking-widest">all out</span>
+          <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Empty</span>
         ) : (
-          <div className="grid grid-cols-2 gap-1 sm:gap-2 place-items-center">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 place-items-center">
             {piecesInYard.map(p => (
-              <div key={p.i} className="w-4 h-4 sm:w-6 sm:h-6">
+              <div key={p.i} className="w-5 h-5 sm:w-7 sm:h-7 hover:scale-110 transition-transform">
                 <Piece player={player} pieceIndex={p.i} pos={p.pos} />
               </div>
             ))}
@@ -106,39 +105,33 @@ const PlayerYard = ({ player }) => {
       </div>
 
       {/* Home count */}
-      {piecesHome > 0 && (
-        <div className="pb-1.5 text-[9px] sm:text-[10px] text-amber-400 font-bold tracking-widest">
-          {piecesHome}/4 HOME
-        </div>
-      )}
+      <div className="mt-1 mb-2 text-[10px] sm:text-xs text-slate-400 font-bold tracking-widest relative z-10 flex items-center gap-1">
+        <span className={piecesHome === 4 ? 'text-amber-400' : 'text-slate-500'}>★</span>
+        {piecesHome}/4 HOME
+      </div>
 
-      {/* TAP TO CAST overlay */}
-      {canRoll && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1
-                    bg-slate-900/70 backdrop-blur-[2px] rounded-xl">
-          <span className="text-xl sm:text-2xl">🪵</span>
-          <span className="text-[9px] sm:text-[10px] text-amber-300 font-black uppercase tracking-widest text-center">
-            {gameState === 'EXTRA_MOVING' ? 'Bonus Roll' : 'Cast Sticks'}
-          </span>
-          {gameState === 'EXTRA_MOVING' && (
-            <button onClick={handleSkip}
-              className="mt-1 text-[8px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full border border-slate-600 hover:text-white transition-colors">
-              Skip
-            </button>
-          )}
-        </div>
-      )}
+      {/* Explicit Actions (Buttons) */}
+      <div className="flex flex-col gap-1 w-full px-2 relative z-10 min-h-[30px] justify-center items-center">
+        {canRoll && (
+          <button onClick={(e) => { e.stopPropagation(); handleRoll(); }}
+            className="w-[90%] py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_4px_15px_rgba(245,158,11,0.5)] hover:scale-105 hover:brightness-110 active:scale-95 transition-all">
+            {gameState === 'EXTRA_MOVING' ? 'Bonus Roll' : 'Roll Dice'} 🎲
+          </button>
+        )}
 
-      {/* Bot thinking overlay */}
-      {isBotThinking && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1
-                    bg-slate-900/70 backdrop-blur-[2px] rounded-xl">
-          <span className="text-xl sm:text-2xl">🤖</span>
-          <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">
-            Thinking…
+        {gameState === 'EXTRA_MOVING' && canRoll && (
+          <button onClick={handleSkip}
+            className="w-[70%] py-1 rounded-full bg-slate-700/80 text-slate-300 font-bold text-[9px] uppercase tracking-wider hover:bg-slate-600 hover:text-white transition-colors border border-slate-600">
+            Skip Turn
+          </button>
+        )}
+
+        {isBotThinking && (
+          <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest animate-pulse flex items-center gap-1">
+            <span className="text-base">🤖</span> Thinking…
           </span>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

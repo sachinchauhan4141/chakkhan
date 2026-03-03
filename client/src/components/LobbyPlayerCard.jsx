@@ -28,12 +28,13 @@ const PLAYER_COLORS = { p1: '#ef4444', p2: '#3b82f6', p3: '#facc15', p4: '#22c55
 const PLAYER_LABELS = { p1: 'Red', p2: 'Blue', p3: 'Yellow', p4: 'Green' };
 
 // ─── Filled Player Card ──────────────────────────────────────────────────────
-const FilledCard = ({ player, isYou, isHost, isReady }) => {
+const FilledCard = ({ player, isYou, isHost, isReady, onViewProfile }) => {
     const rank = getRank(player.mmr || 1000);
     const roleColor = PLAYER_COLORS[player.role] || '#94a3b8';
 
     return (
-        <div className="relative group overflow-hidden rounded-2xl border transition-all duration-300"
+        <div className={`relative group overflow-hidden rounded-2xl border transition-all duration-300 ${onViewProfile && !isYou && !player.isBot ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
+            onClick={() => { if (onViewProfile && !isYou && !player.isBot) onViewProfile(player); }}
             style={{
                 background: `linear-gradient(135deg, ${rank.bg}, rgba(15,23,42,0.9))`,
                 borderColor: isReady ? '#22c55e' : rank.border,
@@ -121,9 +122,9 @@ const EmptyCard = ({ index, onInvite }) => (
 );
 
 // ─── Main Export ─────────────────────────────────────────────────────────────
-const LobbyPlayerCard = ({ player, isYou, isHost, isReady, isEmpty, index, onInvite }) => {
+const LobbyPlayerCard = ({ player, isYou, isHost, isReady, isEmpty, index, onInvite, onViewProfile }) => {
     if (isEmpty || !player) return <EmptyCard index={index} onInvite={onInvite} />;
-    return <FilledCard player={player} isYou={isYou} isHost={isHost} isReady={isReady} />;
+    return <FilledCard player={player} isYou={isYou} isHost={isHost} isReady={isReady} onViewProfile={onViewProfile} />;
 };
 
 export default LobbyPlayerCard;

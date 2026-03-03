@@ -1,33 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import Stick3D from './Stick3D';
 
 const Sticks = () => {
     const { rollResult } = useSelector(state => state.game);
 
-    // `shown` becomes true when we have a result to display
     const [shown, setShown] = useState(false);
-    // `sticks` is the authoritative array of booleans (true = flat-side up)
     const [sticks, setSticks] = useState([false, false, false, false]);
-    // `animating` drives the CSS tumble-in animation class
     const [animating, setAnimating] = useState(false);
+    const [showingNumber, setShowingNumber] = useState(false);
 
     useEffect(() => {
         if (!rollResult) return;
 
-        // Trigger tumble animation
         setAnimating(true);
         setShown(true);
+        setShowingNumber(false);
 
-        // After the shake, commit the final stick positions
         const timer = setTimeout(() => {
             setSticks(rollResult.sticks);
             setAnimating(false);
+            setShowingNumber(true); // Trigger big number pop
         }, 650);
 
-        // Auto-hide after 1.8s so it doesn't block the board
         const hideTimer = setTimeout(() => {
             setShown(false);
-        }, 1800);
+            setShowingNumber(false);
+        }, 2200); // Extended slightly for full animation
 
         return () => {
             clearTimeout(timer);
@@ -40,56 +39,51 @@ const Sticks = () => {
     return (
         <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
             {/* Darkened overlay so sticks pop */}
-            <div className="absolute inset-0 bg-black/50" />
+            <div className={`absolute inset-0 bg-black/60 transition-opacity duration-500 ${showingNumber ? 'opacity-80' : 'opacity-100'}`} />
 
             {/* Sticks panel */}
-            <div className="relative flex flex-col items-center gap-3">
-                {/* Result label */}
-                {!animating && rollResult && (
-                    <div className="text-white text-2xl sm:text-3xl font-black uppercase tracking-widest drop-shadow-[0_0_12px_rgba(255,255,255,0.9)] animate-[fadeUp_0.3s_ease-out_forwards] text-center">
-                        {rollResult.value === 8 ? '✨ Changa! — Rolled 8 ✨'
-                            : rollResult.value === 4 ? '🎯 Chakkhan! — Rolled 4'
-                                : `Rolled: ${rollResult.value}`}
+            <div className={`relative flex flex-col items-center gap-6 transition-all duration-500 ${showingNumber ? 'scale-75 opacity-20 blur-sm' : 'scale-100 opacity-100 blur-none'}`}>
+                {/* Result label (only shown briefly before number pop) */}
+                {!animating && !showingNumber && rollResult && (
+                    <div className="text-amber-300 text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-widest drop-shadow-[0_0_20px_rgba(251,191,36,0.8)] text-center mb-4">
+                        {rollResult.value === 8 ? '✨ Changa! ✨'
+                            : rollResult.value === 4 ? '🎯 Chakkhan!'
+                                : `Rolled`}
                     </div>
                 )}
 
-                {/* The 4 sticks side by side */}
-                <div className="flex gap-3 sm:gap-5 items-center justify-center">
+                {/* The 4 sticks side by side - MASSIVE & 3D */}
+                <div className="flex gap-2 sm:gap-4 md:gap-8 items-center justify-center relative w-full h-[60vh] max-h-[800px]">
                     {sticks.map((isFlat, i) => (
-                        <div
-                            key={i}
-                            className={`preserve-3d relative cursor-default ${animating ? 'animate-shell-tumble' : 'animate-shell-land'}`}
-                            style={{
-                                width: '32px',
-                                height: '80px',
-                                animationDelay: `${i * 120}ms`,
-                                transform: isFlat ? 'rotateY(0deg)' : 'rotateY(180deg)'
-                            }}
-                        >
-                            {/* Front Face (Flat white side of the shell) */}
-                            <div className="absolute inset-0 backface-hidden rounded-[40%] bg-gradient-to-b from-[#f8f9fa] to-[#e9ecef] shadow-[inset_0_0_15px_rgba(0,0,0,0.1),_0_5px_15px_rgba(0,0,0,0.2)] border border-[#dee2e6] flex items-center justify-center overflow-hidden">
-                                <div className="w-1.5 h-3/4 rounded-full bg-gradient-to-b from-[#ced4da] to-[#adb5bd] shadow-[inset_0_2px_5px_rgba(0,0,0,0.2)]"></div>
-                            </div>
-
-                            {/* Back Face (Rounded brown ribbed side of the shell) */}
-                            <div className="absolute inset-0 backface-hidden rounded-[40%] bg-gradient-to-br from-[#8b5a2b] to-[#5c3a21] shadow-[inset_0_-5px_15px_rgba(0,0,0,0.4),_0_5px_15px_rgba(0,0,0,0.3)] border border-[#4a2e1b] overflow-hidden" style={{ transform: 'rotateY(180deg) translateZ(5px)' }}>
-                                <div className="absolute inset-0 wood-pattern opacity-60 mix-blend-multiply"></div>
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]"></div>
-                            </div>
+                        <div key={i} className="absolute transition-transform duration-700" style={{ transform: `translateX(${(i - 1.5) * 25}%) translateY(${(i % 2 === 0 ? 10 : -10)}px)` }}>
+                            <Stick3D
+                                isFlat={isFlat}
+                                animating={animating}
+                                delay={`${i * 120}ms`}
+                            />
                         </div>
                     ))}
                 </div>
 
                 {/* Score dots */}
-                <div className="flex gap-2">
+                <div className="flex gap-4 sm:gap-6 mt-4">
                     {sticks.map((isFlat, i) => (
                         <div
                             key={i}
-                            className={`w-3 h-3 rounded-full ${isFlat ? 'bg-amber-300 shadow-[0_0_6px_rgba(251,191,36,0.8)]' : 'bg-stone-700 border border-stone-500'}`}
+                            className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full transition-colors duration-500 ${isFlat ? 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,1)]' : 'bg-stone-800 border-2 border-stone-500 shadow-inner'}`}
                         />
                     ))}
                 </div>
             </div>
+
+            {/* Massive Number Zoom Animation */}
+            {showingNumber && rollResult && (
+                <div className="absolute inset-0 flex items-center justify-center animate-[popZoom_1.5s_ease-out_forwards]">
+                    <span className="text-[35vw] md:text-[250px] leading-none font-black text-amber-400 drop-shadow-[0_0_40px_rgba(245,158,11,0.8)]" style={{ WebkitTextStroke: '6px #78350f', textShadow: '4px 8px 0 #451a03' }}>
+                        {rollResult.value}
+                    </span>
+                </div>
+            )}
         </div>
     );
 };

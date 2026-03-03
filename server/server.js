@@ -77,6 +77,10 @@ io.on('connection', async (socket) => {
         gameManager.addToQueue(socket, { ...userData, userId: socket.userId });
     });
 
+    socket.on('leave_queue', () => {
+        gameManager.removeFromQueue(socket);
+    });
+
     socket.on('create_private_room', (userData) => {
         gameManager.createPrivateRoom(socket, { ...userData, userId: socket.userId });
     });

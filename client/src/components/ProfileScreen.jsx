@@ -13,27 +13,30 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
     </div>
 );
 
-const ProfileScreen = ({ onBack }) => {
+const ProfileScreen = ({ onClose, onBack, viewUserId }) => {
     const dispatch = useDispatch();
     const { user, token } = useSelector(s => s.auth);
     const [profile, setProfile] = useState(null);
 
     useEffect(() => {
-        if (!user?._id) return;
-        fetch(`${API}/api/leaderboard/profile/${user._id}`, { headers: { Authorization: `Bearer ${token}` } })
+        const targetId = viewUserId || user?._id;
+        if (!targetId) return;
+        fetch(`${API}/api/leaderboard/profile/${targetId}`, { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json()).then(d => setProfile(d.profile)).catch(() => { });
-    }, [user, token]);
+    }, [user, token, viewUserId]);
 
-    const p = profile || user || {};
+    const p = profile || (viewUserId ? {} : user) || {};
     const winRate = p.gamesPlayed > 0 ? Math.round((p.wins / p.gamesPlayed) * 100) : 0;
 
     return (
-        <div className="fixed inset-0 bg-slate-900 flex flex-col overflow-hidden select-none" style={{ height: '100dvh' }}>
+        <div className={`fixed inset-0 bg-slate-900 flex flex-col overflow-hidden select-none ${onClose ? 'z-[300]' : ''}`} style={{ height: '100dvh' }}>
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-                <button onClick={onBack} className="text-slate-400 hover:text-slate-200 transition-colors"><ArrowLeft size={20} /></button>
-                <h2 className="cinzel-font text-amber-400 font-bold text-sm tracking-widest uppercase">Profile</h2>
-                <button onClick={() => dispatch(logout())} className="text-slate-500 hover:text-red-400 transition-colors"><LogOut size={18} /></button>
+                <button onClick={onClose || onBack} className="text-slate-400 hover:text-slate-200 transition-colors"><ArrowLeft size={20} /></button>
+                <h2 className="cinzel-font text-amber-400 font-bold text-sm tracking-widest uppercase">{viewUserId ? "Player Profile" : "Profile"}</h2>
+                {viewUserId ? <div className="w-5" /> : (
+                    <button onClick={() => dispatch(logout())} className="text-slate-500 hover:text-red-400 transition-colors"><LogOut size={18} /></button>
+                )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4">

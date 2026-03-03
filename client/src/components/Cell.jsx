@@ -21,18 +21,18 @@ const INNER_FLOW = {
 // ── Gateway cells: last outer cell before inner ring (pivot point) ────────
 // Shows a bigger colored inward arrow
 const GATEWAYS = {
-    21: { color: '#ef4444', arrow: '↑' }, // p1 gateway → inner at 16
-    19: { color: '#3b82f6', arrow: '←' }, // p2 gateway → inner at 18
-    3: { color: '#facc15', arrow: '↓' }, // p3 gateway → inner at 8
-    5: { color: '#22c55e', arrow: '→' }, // p4 gateway → inner at 6
+    21: { color: '#fb7185', arrow: '↑' }, // p1 gateway → inner at 16 (Rose)
+    19: { color: '#818cf8', arrow: '←' }, // p2 gateway → inner at 18 (Indigo)
+    3: { color: '#fbbf24', arrow: '↓' }, // p3 gateway → inner at 8 (Amber)
+    5: { color: '#34d399', arrow: '→' }, // p4 gateway → inner at 6 (Emerald)
 };
 
 // ── Inner ring personal ENTRY cells ───────────────────────────────────────
 const INNER_ENTRIES = {
-    16: '#ef4444', // p1
-    18: '#3b82f6', // p2
-    8: '#facc15', // p3
-    6: '#22c55e', // p4
+    16: '#fb7185', // p1
+    18: '#818cf8', // p2
+    8: '#fbbf24', // p3
+    6: '#34d399', // p4
 };
 
 // ── Last inner ring cell before center (near-win) ─────────────────────────
@@ -40,19 +40,19 @@ const INNER_FINALS = new Set([17, 13, 7, 11]);
 
 // ── Home (start) cells ────────────────────────────────────────────────────
 const HOME_CELLS = {
-    22: { color: '#ef4444', bg: 'rgba(239,68,68,0.14)', rotate: 0 }, // bottom → roof up
-    14: { color: '#3b82f6', bg: 'rgba(59,130,246,0.14)', rotate: -90 }, // right  → roof left
-    2: { color: '#facc15', bg: 'rgba(250,204,21,0.18)', rotate: 180 }, // top    → roof down
-    10: { color: '#22c55e', bg: 'rgba(34,197,94,0.14)', rotate: 90 }, // left   → roof right
+    22: { color: '#fb7185', bg: 'rgba(251,113,133,0.15)', rotate: 0 }, // bottom → roof up
+    14: { color: '#818cf8', bg: 'rgba(129,140,248,0.15)', rotate: -90 }, // right  → roof left
+    2: { color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', rotate: 180 }, // top    → roof down
+    10: { color: '#34d399', bg: 'rgba(52,211,153,0.15)', rotate: 90 }, // left   → roof right
 };
 
 // ── Strictly highlighted colored cells (per user request) ─────────────────
 // Only 2, 7, 10, 11, 12(Center), 13, 14, 17, 22 are filled.
 const HIGHLIGHT_COLORS = {
-    22: '#ef4444', 17: '#ef4444', // p1 (bottom-up)
-    14: '#3b82f6', 13: '#3b82f6', // p2 (right-left)
-    2: '#facc15', 7: '#facc15',  // p3 (top-down)
-    10: '#22c55e', 11: '#22c55e', // p4 (left-right)
+    22: '#fb7185', 17: '#fb7185', // p1 (bottom-up)
+    14: '#818cf8', 13: '#818cf8', // p2 (right-left)
+    2: '#fbbf24', 7: '#fbbf24',  // p3 (top-down)
+    10: '#34d399', 11: '#34d399', // p4 (left-right)
 };
 
 const INNER_RING = new Set([6, 7, 8, 11, 13, 16, 17, 18]);
@@ -60,7 +60,7 @@ const INNER_RING = new Set([6, 7, 8, 11, 13, 16, 17, 18]);
 // Reverse lookup: globalCell → player color for front-of-house shields (transparent)
 const FRONT_OF_HOUSE_INFO = {};
 Object.entries(FRONT_OF_HOUSE).forEach(([player, cell]) => {
-    const colors = { p1: '#ef4444', p2: '#3b82f6', p3: '#facc15', p4: '#22c55e' };
+    const colors = { p1: '#fb7185', p2: '#818cf8', p3: '#fbbf24', p4: '#34d399' };
     FRONT_OF_HOUSE_INFO[cell] = colors[player];
 });
 
@@ -96,16 +96,16 @@ const Cell = ({ cellIndex, theme }) => {
             {isCenter && (
                 <div className="absolute inset-0 pointer-events-none z-10">
                     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                        {/* Top triangle → p3 yellow */}
-                        <polygon points="0,0 100,0 50,50" fill="#facc15" />
-                        {/* Right triangle → p2 blue */}
-                        <polygon points="100,0 100,100 50,50" fill="#3b82f6" />
-                        {/* Bottom triangle → p1 red */}
-                        <polygon points="0,100 100,100 50,50" fill="#ef4444" />
-                        {/* Left triangle → p4 green */}
-                        <polygon points="0,0 0,100 50,50" fill="#22c55e" />
+                        {/* Top triangle → p3 amber */}
+                        <polygon points="0,0 100,0 50,50" fill="#fbbf24" />
+                        {/* Right triangle → p2 indigo */}
+                        <polygon points="100,0 100,100 50,50" fill="#818cf8" />
+                        {/* Bottom triangle → p1 rose */}
+                        <polygon points="0,100 100,100 50,50" fill="#fb7185" />
+                        {/* Left triangle → p4 emerald */}
+                        <polygon points="0,0 0,100 50,50" fill="#34d399" />
                         {/* Center dot */}
-                        <circle cx="50" cy="50" r="6" fill="white" opacity="0.8" />
+                        <circle cx="50" cy="50" r="12" fill="white" className="drop-shadow-sm" />
                     </svg>
                 </div>
             )}
@@ -143,7 +143,7 @@ const Cell = ({ cellIndex, theme }) => {
                     )}
                     {/* Big inner-pivot arrow */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-                        <span className="text-lg md:text-2xl font-black leading-none animate-[pulse_2s_ease-in-out_infinite]"
+                        <span className="text-lg md:text-2xl font-black leading-none animate-[pulse_2s_ease-in-out_infinite] drop-shadow-sm"
                             style={{ color: gateway.color }}>
                             {gateway.arrow}
                         </span>
@@ -158,15 +158,15 @@ const Cell = ({ cellIndex, theme }) => {
             {/* ── SAFE CELL: subtle X marks (non-home, non-center) ── */}
             {isSafe && !isCenter && !homeData && (
                 <>
-                    <div className="absolute w-[75%] h-[1.5px] bg-slate-400/35 transform rotate-45 pointer-events-none rounded" />
-                    <div className="absolute w-[75%] h-[1.5px] bg-slate-400/35 transform -rotate-45 pointer-events-none rounded" />
+                    <div className="absolute w-[75%] h-[1.5px] bg-slate-300 transform rotate-45 pointer-events-none rounded" />
+                    <div className="absolute w-[75%] h-[1.5px] bg-slate-300 transform -rotate-45 pointer-events-none rounded" />
                 </>
             )}
 
             {/* ── FRONT-OF-HOUSE: player-colored shield icon (safe for that player) ── */}
             {frontOfHouseColor && !gateway && (
-                <div className="absolute top-[2px] left-[2px] pointer-events-none select-none" style={{ opacity: 0.45 }}>
-                    <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4" fill={frontOfHouseColor} xmlns="http://www.w3.org/2000/svg">
+                <div className="absolute top-[2px] left-[2px] pointer-events-none select-none" style={{ opacity: 0.65 }}>
+                    <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 drop-shadow-[0_1px_1px_rgba(0,0,0,0.1)]" fill={frontOfHouseColor} xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 2L3 7v6c0 5.25 3.83 10.15 9 11.25C17.17 23.15 21 18.25 21 13V7l-9-5z" />
                     </svg>
                 </div>
@@ -174,16 +174,16 @@ const Cell = ({ cellIndex, theme }) => {
 
             {/* ── OUTER RING flow arrow (corner, small, barely visible) ── */}
             {outerArrow && !homeData && !gateway && !isCenter && (
-                <div className="absolute bottom-[1px] right-[2px] font-black leading-none select-none pointer-events-none"
-                    style={{ fontSize: '8px', color: '#94a3b8', opacity: 0.4 }}>
+                <div className="absolute bottom-[2px] right-[4px] font-black leading-none select-none pointer-events-none"
+                    style={{ fontSize: '10px', color: '#cbd5e1', opacity: 0.6 }}>
                     {outerArrow}
                 </div>
             )}
 
             {/* ── INNER RING flow arrow (amber, small, corner) ── */}
-            {innerArrow && !isCenter && !entryColor && (
-                <div className="absolute bottom-[1px] right-[2px] font-black leading-none select-none pointer-events-none"
-                    style={{ fontSize: '8px', color: '#d97706', opacity: 0.55 }}>
+            {innerArrow && !isCenter && (
+                <div className="absolute bottom-[2px] right-[4px] font-black leading-none select-none pointer-events-none"
+                    style={{ fontSize: '10px', color: '#fbbf24', opacity: 0.7 }}>
                     {innerArrow}
                 </div>
             )}

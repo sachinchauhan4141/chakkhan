@@ -9,7 +9,7 @@ import socketService from '../services/socket';
 import LobbyPlayerCard from './LobbyPlayerCard';
 import BoardThemeSelector from './BoardThemeSelector';
 import LeaderboardScreen from './LeaderboardScreen';
-import { Settings, LogOut, Users, UserPlus, MessageCircle, Send, Trophy, Star, ChevronLeft, ChevronRight, X, User, Moon, Sun, Monitor, HelpCircle, Gamepad2 } from 'lucide-react';
+import { Settings, LogOut, Users, UserPlus, MessageCircle, Send, Trophy, Star, ChevronLeft, ChevronRight, X, User, Moon, Sun, Monitor, HelpCircle, Gamepad2, Search, Check, Circle } from 'lucide-react';
 import { logout } from '../store/authSlice';
 
 const API = import.meta.env.PROD ? '' : 'http://localhost:3001';
@@ -43,21 +43,62 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     const [showStartModal, setShowStartModal] = useState(false);
 
     // --- Social State ---
+    const [friendsTab, setFriendsTab] = useState('friends'); // 'friends' | 'requests' | 'search'
     const [friends, setFriends] = useState([]);
-    const [showAddFriend, setShowAddFriend] = useState(false);
-    const [addFriendInput, setAddFriendInput] = useState('');
+    const [requests, setRequests] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [statusMsg, setStatusMsg] = useState('');
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const checkFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', checkFullscreen);
+        checkFullscreen();
+        return () => document.removeEventListener('fullscreenchange', checkFullscreen);
+    }, []);
+
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const chatEndRef = useRef(null);
 
-    // Load friends
-    useEffect(() => {
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+    const loadFriends = () => {
         if (!token) return;
-        fetch(`${API}/api/friends/list`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API}/api/friends/list`, { headers })
             .then(r => r.json())
-            .then(d => setFriends(d.friends || []))
+            .then(d => { setFriends(d.friends || []); setRequests(d.requests || []); })
             .catch(() => { });
-    }, [token]);
+    };
+
+    // Load friends
+    useEffect(() => { loadFriends(); }, [token]);
+
+    const searchUsers = (q) => {
+        setSearchQuery(q);
+        if (q.length < 2) { setSearchResults([]); return; }
+        fetch(`${API}/api/friends/search?q=${encodeURIComponent(q)}`, { headers })
+            .then(r => r.json()).then(d => setSearchResults(d.users || [])).catch(() => { });
+    };
+
+    const sendRequest = async (tag) => {
+        const res = await fetch(`${API}/api/friends/send`, { method: 'POST', headers, body: JSON.stringify({ targetTag: tag }) });
+        const data = await res.json();
+        setStatusMsg(data.message || data.error);
+        setTimeout(() => setStatusMsg(''), 3000);
+        loadFriends();
+    };
+
+    const acceptRequest = async (fromId) => {
+        await fetch(`${API}/api/friends/accept`, { method: 'POST', headers, body: JSON.stringify({ fromId }) });
+        loadFriends();
+    };
+
+    const declineRequest = async (fromId) => {
+        await fetch(`${API}/api/friends/decline`, { method: 'POST', headers, body: JSON.stringify({ fromId }) });
+        loadFriends();
+    };
 
     // Socket Events
     useEffect(() => {
@@ -142,6 +183,16 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
     const handleConfirmStart = () => {
         setShowStartModal(false);
+
+        // Attempt to force fullscreen for pro-level immersive feel
+        try {
+            if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.warn("Fullscreen deferred:", err));
+            }
+        } catch (e) {
+            console.warn("Fullscreen API not supported");
+        }
+
         if (lobbyMode === 'OFFLINE') {
             // Start Local/Bot Game immediately
             const activePlayers = playerCount === 2 && colorPair === 'BG' ? ['p2', 'p4'] :
@@ -229,26 +280,26 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                 <div className="flex items-center justify-between mb-8">
                     <div
                         onClick={() => setActiveTab('profile')}
-                        className="flex items-center gap-3 bg-slate-800/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/50 cursor-pointer hover:bg-slate-700/80 transition-colors"
+                        className="flex items-center gap-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
                     >
                         <div className="relative">
-                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-lg font-bold overflow-hidden">
-                                {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-amber-400">{storedUsername[0]?.toUpperCase()}</span>}
+                            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-lg font-bold overflow-hidden">
+                                {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-indigo-600">{storedUsername[0]?.toUpperCase()}</span>}
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-900 text-[9px] font-black px-1 rounded-sm border border-slate-900">
+                            <div className="absolute -bottom-1 -right-1 bg-indigo-500 text-white text-[9px] font-black px-1 rounded-sm border border-white">
                                 Lv.{Math.floor((user?.stats?.wins || 0) / 2) + 1}
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-slate-100 font-bold text-xs truncate max-w-[80px]">{storedUsername}</h1>
-                            <p className="text-amber-400 text-[9px] font-black">{user?.mmr || 1000} MMR</p>
+                            <h1 className="text-slate-800 font-bold text-xs truncate max-w-[80px]">{storedUsername}</h1>
+                            <p className="text-indigo-500 text-[9px] font-black">{user?.mmr || 1000} MMR</p>
                         </div>
                     </div>
 
-                    <div className="flex bg-slate-900/80 backdrop-blur-md p-1 rounded-full border border-slate-700/50">
+                    <div className="flex bg-white/90 backdrop-blur-md p-1 rounded-full border border-slate-200 shadow-sm">
                         {['ONLINE', 'OFFLINE'].map(m => (
                             <button key={m} onClick={() => { setLobbyMode(m); if (roomCode) handleLeaveRoom(); setIsSearching(false); }}
-                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all duration-300 ${lobbyMode === m ? 'bg-amber-500 text-slate-900 shadow-[0_0_10px_rgba(245,158,11,0.4)]' : 'text-slate-400'}`}>
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all duration-300 ${lobbyMode === m ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                                 {m}
                             </button>
                         ))}
@@ -259,23 +310,22 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                 <div className="flex-1 flex flex-col justify-center items-center gap-6 pb-24 relative">
                     {/* Searching Overlay */}
                     {isSearching && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-3xl">
-                            <div className="w-24 h-24 rounded-full border-2 border-amber-500/30 flex items-center justify-center mb-4"
-                                style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%)' }}>
-                                <div className="absolute w-full h-full border-t-2 border-amber-500 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
-                                <span className="text-amber-400 font-bold text-xl animate-pulse">{formatTime(searchTime)}</span>
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md rounded-3xl p-4">
+                            <div className="w-24 h-24 rounded-full border-2 border-indigo-200 flex items-center justify-center mb-4 bg-indigo-50/50">
+                                <div className="absolute w-full h-full border-t-2 border-indigo-500 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+                                <span className="text-indigo-600 font-bold text-xl animate-pulse">{formatTime(searchTime)}</span>
                             </div>
-                            <h2 className="cinzel-font text-amber-400 text-xl font-black tracking-widest uppercase mb-1">Matchmaking</h2>
-                            <p className="text-slate-400 text-xs mb-6">{queueCount} players in queue</p>
-                            <button onClick={handleStart} className="px-6 py-2 bg-red-500/20 text-red-500 border border-red-500/50 rounded-full text-xs font-bold uppercase tracking-wide">Cancel</button>
+                            <h2 className="cinzel-font text-indigo-700 text-xl font-black tracking-widest uppercase mb-1">Matchmaking</h2>
+                            <p className="text-slate-500 text-xs mb-6">{queueCount} players in queue</p>
+                            <button onClick={handleStart} className="px-6 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-xs font-bold uppercase tracking-wide hover:bg-rose-100 transition">Cancel</button>
                         </div>
                     )}
 
                     {/* Player Cards: Horizontal Scroll */}
-                    <div className="w-full max-w-[400px] flex flex-col items-center gap-2">
+                    <div className="w-full max-w-[400px] flex flex-col items-center gap-2 mt-4">
                         <div className="w-full flex justify-between items-center px-6">
                             <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Squad Roster</span>
-                            <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest">
+                            <span className="bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest shadow-sm">
                                 {connectedPlayers.length || slots.length}/{slots.length} Ready
                             </span>
                         </div>
@@ -312,32 +362,32 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     </div>
 
                     {/* --- Matchmaking Configuration --- */}
-                    <div className="mx-6 mt-4 mb-2 bg-slate-800/60 backdrop-blur-md rounded-2xl border border-slate-700/50 p-3 shadow-xl flex flex-col gap-3 relative z-10 pointer-events-auto">
+                    <div className="mx-6 mt-4 mb-2 bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200 p-3 shadow-md flex flex-col gap-3 relative z-10 pointer-events-auto">
                         {/* Theme Selector (Mini) */}
-                        <div className="flex items-center justify-between border-b border-slate-700/50 pb-2 mb-1">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-1">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Monitor size={12} /> Theme</span>
                             <div className="flex gap-2">
-                                <button onClick={() => dispatch(setBoardTheme('light'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'light' ? 'bg-amber-100 border-amber-500 text-amber-600 shadow-md' : 'bg-slate-700 border-slate-600 text-slate-400'}`}><Sun size={12} /></button>
-                                <button onClick={() => dispatch(setBoardTheme('dark'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'dark' ? 'bg-slate-900 border-amber-500 text-amber-500 shadow-md' : 'bg-slate-700 border-slate-600 text-slate-400'}`}><Moon size={12} /></button>
+                                <button onClick={() => dispatch(setBoardTheme('light'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'light' ? 'bg-indigo-50 border-indigo-400 text-indigo-600 shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200'}`}><Sun size={12} /></button>
+                                <button onClick={() => dispatch(setBoardTheme('dark'))} className={`w-6 h-6 rounded-full flex items-center justify-center transition border ${boardTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-100 shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200'}`}><Moon size={12} /></button>
                             </div>
                         </div>
 
                         {lobbyMode === 'OFFLINE' ? (
                             <div className="flex flex-col gap-2">
-                                <div className="flex bg-slate-900/50 rounded-xl p-1 shadow-inner h-8">
+                                <div className="flex bg-slate-100 rounded-xl p-1 h-8">
                                     {['BOTS', 'LOCAL'].map(t => (
                                         <button key={t} onClick={() => setOfflineType(t)}
-                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${offlineType === t ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
+                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${offlineType === t ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
                                             {t === 'BOTS' ? 'VS BOTS' : 'PASS & PLAY'}
                                         </button>
                                     ))}
                                 </div>
-                                <div className="flex items-center justify-between px-1">
+                                <div className="flex items-center justify-between px-1 mt-1">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Squad</span>
                                     <div className="flex gap-1.5">
                                         {[2, 3, 4].map(n => (
                                             <button key={n} onClick={() => setPlayerCount(n)}
-                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border border-slate-700 ${playerCount === n ? 'bg-amber-500 text-slate-900 border-amber-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border ${playerCount === n ? 'bg-indigo-50 text-indigo-600 border-indigo-300 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}>
                                                 <div className="flex justify-center flex-wrap gap-[2px] w-[18px]">
                                                     {Array(n).fill(0).map((_, i) => <User key={i} size={8} strokeWidth={3} />)}
                                                 </div>
@@ -348,22 +398,22 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                <div className="flex bg-slate-900/50 rounded-xl p-1 shadow-inner h-8">
+                                <div className="flex bg-slate-100 rounded-xl p-1 h-8">
                                     {['PUBLIC', 'PRIVATE'].map(t => (
                                         <button key={t} onClick={() => { setMatchType(t); if (roomCode) handleLeaveRoom(); }}
-                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${matchType === t ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}>
+                                            className={`flex-1 text-[10px] font-bold tracking-wider rounded-lg transition ${matchType === t ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
                                             {t === 'PUBLIC' ? 'RANKED' : 'ROOM'}
                                         </button>
                                     ))}
                                 </div>
 
                                 {/* Squad Size / Action Row */}
-                                <div className="flex items-center justify-between px-1">
+                                <div className="flex items-center justify-between px-1 mt-1">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Team</span>
                                     <div className="flex gap-1.5">
                                         {[2, 3, 4].map(n => (
                                             <button key={n} onClick={() => { if (!roomCode) setPlayerCount(n); }}
-                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border border-slate-700 ${playerCount === n ? 'bg-blue-500 text-white border-blue-400 shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'} ${roomCode ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                className={`w-8 h-8 rounded-xl transition flex flex-col items-center justify-center border ${playerCount === n ? 'bg-indigo-50 text-indigo-600 border-indigo-300 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'} ${roomCode ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                 <div className="flex justify-center flex-wrap gap-[2px] w-[18px]">
                                                     {Array(n).fill(0).map((_, i) => <User key={i} size={8} strokeWidth={3} />)}
                                                 </div>
@@ -380,21 +430,21 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                         lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !roomCode && (
                             <div className="mx-6 w-full max-w-[320px] flex gap-2 mt-2 self-center">
                                 <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ENTER CODE" maxLength={6}
-                                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-amber-400 outline-none placeholder:text-slate-500" />
-                                <button onClick={handleJoinPrivate} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl">JOIN</button>
+                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-center text-sm font-black uppercase text-indigo-600 outline-none placeholder:text-slate-400 shadow-sm focus:border-indigo-400" />
+                                <button onClick={handleJoinPrivate} className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 rounded-xl shadow-sm transition">JOIN</button>
                             </div>
                         )
                     }
                     {
                         lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && (
-                            <div className="mx-6 w-full max-w-[320px] text-center bg-slate-800/50 py-3 rounded-2xl border border-slate-700 mt-2 self-center cursor-pointer active:scale-95 transition-transform" onClick={() => {
+                            <div className="mx-6 w-full max-w-[320px] text-center bg-white/80 py-3 rounded-2xl border border-slate-200 shadow-sm mt-2 self-center cursor-pointer active:scale-95 transition-transform" onClick={() => {
                                 navigator.clipboard.writeText(roomCode);
                                 dispatch({ type: 'game/addLog', payload: 'Code copied!' });
                             }}>
-                                <p className="text-[10px] text-slate-500 mb-1">ROOM CODE</p>
+                                <p className="text-[10px] text-slate-500 mb-1 font-bold">ROOM CODE</p>
                                 <div className="flex justify-center items-center gap-4">
-                                    <p className="text-2xl font-black text-amber-400 tracking-[0.3em]">{roomCode}</p>
-                                    <button onClick={(e) => { e.stopPropagation(); handleLeaveRoom(); }} className="text-red-400 hover:text-red-300 p-2"><LogOut size={16} /></button>
+                                    <p className="text-2xl font-black text-indigo-600 tracking-[0.3em]">{roomCode}</p>
+                                    <button onClick={(e) => { e.stopPropagation(); handleLeaveRoom(); }} className="text-rose-500 hover:text-rose-600 bg-rose-50 p-2 rounded-full"><LogOut size={16} /></button>
                                 </div>
                             </div>
                         )
@@ -402,21 +452,21 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
                     {/* Start Button */}
                     <div className="w-full max-w-[320px] mt-4 z-10">
-                        {errorMsg && <p className="text-red-400 text-xs text-center mb-2 animate-pulse">{errorMsg}</p>}
+                        {errorMsg && <p className="text-rose-500 text-xs text-center mb-2 animate-pulse font-bold">{errorMsg}</p>}
 
                         {(lobbyMode === 'OFFLINE' || (lobbyMode === 'ONLINE' && matchType === 'PUBLIC' && !isSearching) || (lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && (!roomCode || isHost || (roomCode && !isHost)))) && (
                             <button onClick={handleStart}
                                 disabled={lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && isHost && !allReady}
                                 className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-widest transition-all
                                 ${lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && roomCode && isHost && !allReady
-                                        ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                         : lobbyMode === 'ONLINE' && matchType === 'PUBLIC'
-                                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] active:scale-95'
+                                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg active:scale-95'
                                             : lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !roomCode
-                                                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95'
+                                                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg active:scale-95'
                                                 : lobbyMode === 'ONLINE' && matchType === 'PRIVATE' && !isHost
-                                                    ? isReady ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' : 'bg-slate-600 text-slate-300'
-                                                    : 'bg-gradient-to-r from-amber-400 to-amber-600 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95'
+                                                    ? isReady ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md hover:shadow-lg active:scale-95'
                                     }`}>
                                 {lobbyMode === 'OFFLINE' ? 'START' :
                                     matchType === 'PUBLIC' ? 'FIND MATCH' :
@@ -435,28 +485,28 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
                     {/* Pre-Game Confirmation Modal overlay */}
                     {showStartModal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-                            <div className="bg-slate-800 border-2 border-slate-600 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 overflow-hidden relative">
-                                <h3 className="text-xl font-black text-amber-500 tracking-widest uppercase mb-4 text-center">Confirm Match</h3>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 overflow-hidden relative">
+                                <h3 className="text-xl font-black text-indigo-600 tracking-widest uppercase mb-4 text-center">Confirm Match</h3>
 
-                                <div className="space-y-3 mb-6 bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
+                                <div className="space-y-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Mode</span>
-                                        <span className="text-slate-200 font-black">{lobbyMode} {lobbyMode === 'ONLINE' ? `(${matchType})` : `(${offlineType})`}</span>
+                                        <span className="text-slate-500 font-bold uppercase tracking-wider">Mode</span>
+                                        <span className="text-slate-800 font-black">{lobbyMode} {lobbyMode === 'ONLINE' ? `(${matchType})` : `(${offlineType})`}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Players</span>
-                                        <span className="text-slate-200 font-black flex items-center gap-1">{playerCount} <User size={14} /></span>
+                                        <span className="text-slate-500 font-bold uppercase tracking-wider">Players</span>
+                                        <span className="text-slate-800 font-black flex items-center gap-1">{playerCount} <User size={14} /></span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="text-slate-400 font-bold uppercase tracking-wider">Theme</span>
-                                        <span className="text-slate-200 font-black truncate max-w-[120px] text-right">{Object.entries({ 'board-neon': 'Neon Vis' }).find(([k]) => k === themeKey)?.[1] || themeKey}</span>
+                                        <span className="text-slate-500 font-bold uppercase tracking-wider">Theme</span>
+                                        <span className="text-slate-800 font-black truncate max-w-[120px] text-right">{Object.entries({ 'board-neon': 'Neon Vis' }).find(([k]) => k === boardTheme)?.[1] || boardTheme}</span>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-3">
-                                    <button onClick={() => setShowStartModal(false)} className="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold uppercase tracking-widest transition-colors">Cancel</button>
-                                    <button onClick={handleConfirmStart} className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-black uppercase tracking-widest transition-colors shadow-[0_0_15px_rgba(245,158,11,0.4)]">Confirm</button>
+                                    <button onClick={() => setShowStartModal(false)} className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold uppercase tracking-widest transition-colors">Cancel</button>
+                                    <button onClick={handleConfirmStart} className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest transition-colors shadow-md hover:shadow-lg">Confirm</button>
                                 </div>
                             </div>
                         </div>
@@ -474,62 +524,72 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
         return (
             <div className="flex-1 flex flex-col pt-6 px-4 pb-20 overflow-y-auto animate-in fade-in">
                 <div className="flex items-center gap-4 mb-8 pl-2">
-                    <button onClick={() => setActiveTab('home')} className="p-2 bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors">
+                    <button onClick={() => setActiveTab('home')} className="p-2 bg-slate-100 text-slate-500 hover:text-indigo-600 rounded-full transition-colors border border-slate-200">
                         <ChevronRight size={20} className="rotate-180" />
                     </button>
-                    <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase">Profile</h2>
+                    <h2 className="text-xl font-black text-indigo-600 tracking-widest uppercase">Profile</h2>
                 </div>
 
                 <div className="flex flex-col items-center mb-8">
                     <div className="relative mb-4">
-                        <div className="w-24 h-24 rounded-full bg-slate-700 flex items-center justify-center text-4xl font-bold overflow-hidden border-4 border-slate-800 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-                            {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-amber-400">{storedUsername[0]?.toUpperCase()}</span>}
+                        <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-4xl font-bold overflow-hidden border-4 border-white shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
+                            {user?.avatarUrl ? <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <span className="text-indigo-500">{storedUsername[0]?.toUpperCase()}</span>}
                         </div>
-                        <div className="absolute -bottom-2 right-0 bg-amber-500 text-slate-900 text-sm font-black px-2 py-0.5 rounded-lg border-2 border-slate-900 shadow-lg">
+                        <div className="absolute -bottom-2 right-0 bg-indigo-500 text-white text-sm font-black px-2 py-0.5 rounded-lg border-2 border-white shadow-md">
                             Lv.{Math.floor(wins / 2) + 1}
                         </div>
                     </div>
-                    <h1 className="text-2xl font-black text-slate-100 mb-1">{storedUsername}</h1>
-                    <p className="text-amber-400 font-bold tracking-widest uppercase text-sm">Competitor</p>
+                    <h1 className="text-2xl font-black text-slate-800 mb-1">{storedUsername}</h1>
+                    <p className="text-indigo-500 font-bold tracking-widest uppercase text-sm">Competitor</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Rank Rating</p>
-                        <p className="text-2xl font-black text-amber-400">{user?.mmr || 1000}</p>
+                    <div className="bg-white backdrop-blur-md rounded-2xl p-4 border border-slate-200 text-center shadow-sm">
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Rank Rating</p>
+                        <p className="text-2xl font-black text-indigo-600">{user?.mmr || 1000}</p>
                     </div>
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Win Rate</p>
-                        <p className="text-2xl font-black text-emerald-400">{winRate}%</p>
+                    <div className="bg-white backdrop-blur-md rounded-2xl p-4 border border-slate-200 text-center shadow-sm">
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Win Rate</p>
+                        <p className="text-2xl font-black text-emerald-500">{winRate}%</p>
                     </div>
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Total Wins</p>
-                        <p className="text-2xl font-black text-slate-200">{wins}</p>
+                    <div className="bg-white backdrop-blur-md rounded-2xl p-4 border border-slate-200 text-center shadow-sm">
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Total Wins</p>
+                        <p className="text-2xl font-black text-slate-700">{wins}</p>
                     </div>
-                    <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-slate-700/50 text-center shadow-lg">
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Games Played</p>
-                        <p className="text-2xl font-black text-slate-200">{totalGames}</p>
+                    <div className="bg-white backdrop-blur-md rounded-2xl p-4 border border-slate-200 text-center shadow-sm">
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Games Played</p>
+                        <p className="text-2xl font-black text-slate-700">{totalGames}</p>
                     </div>
                 </div>
 
-                <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-700/50 p-4 shadow-lg">
-                    <h3 className="text-slate-300 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                <div className="bg-white backdrop-blur-md rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <h3 className="text-slate-800 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
                         <Trophy size={14} className="text-amber-500" /> Recent Matches
                     </h3>
                     <div className="flex flex-col gap-2">
-                        {totalGames === 0 ? (
-                            <p className="text-slate-500 text-xs text-center p-4">No matches played yet.</p>
+                        {(!user?.matchHistory || user.matchHistory.length === 0) ? (
+                            <p className="text-slate-400 text-xs text-center p-4">No matches played yet.</p>
                         ) : (
-                            <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs uppercase">Win</div>
-                                    <div>
-                                        <p className="text-slate-200 text-sm font-bold">Ranked Squad</p>
-                                        <p className="text-slate-500 text-[10px]">2 days ago</p>
+                            user.matchHistory.map((match, idx) => {
+                                const isWin = match.result === 'win';
+                                const date = new Date(match.date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                                return (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${isWin ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                                {isWin ? 'Win' : 'Loss'}
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-800 text-sm font-bold truncate max-w-[120px]">vs {match.opponent}</p>
+                                                <p className="text-slate-400 text-[10px]">{date}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`text-xs font-bold ${isWin ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                            {isWin ? '+' : ''}{match.mmrChange} MMR
+                                        </span>
                                     </div>
-                                </div>
-                                <span className="text-amber-400 text-xs font-bold">+25 MMR</span>
-                            </div>
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -539,79 +599,151 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
     const renderFriendsTab = () => (
         <div className="flex-1 flex flex-col pt-6 px-4 pb-20">
-            <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase mb-4 pl-2">Social</h2>
+            <h2 className="text-xl font-black text-indigo-600 tracking-widest uppercase mb-4 pl-2">Social</h2>
 
-            <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700/50 flex-1 flex flex-col overflow-hidden shadow-xl mb-4">
-                <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/50">
-                    <span className="text-slate-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2"><Users size={16} className="text-amber-400" /> Friends Online</span>
-                    <button onClick={() => setShowAddFriend(!showAddFriend)} className={`flex items-center gap-1.5 text-[10px] font-bold uppercase py-1.5 px-3 rounded-lg border transition-colors ${showAddFriend ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30'}`}>
-                        <UserPlus size={14} /> {showAddFriend ? 'Cancel' : 'Add Friend'}
-                    </button>
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200 flex-1 flex flex-col overflow-hidden shadow-sm mb-4">
+                {/* Tabs */}
+                <div className="flex border-b border-slate-100 bg-slate-50">
+                    {[
+                        { key: 'friends', label: 'Friends', count: friends.length },
+                        { key: 'requests', label: 'Requests', count: requests.length },
+                        { key: 'search', label: 'Search' },
+                    ].map(t => (
+                        <button key={t.key} onClick={() => setFriendsTab(t.key)}
+                            className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${friendsTab === t.key ? 'text-indigo-600 border-b-2 border-indigo-500 bg-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                                }`}>
+                            {t.label} {t.count !== undefined ? `(${t.count})` : ''}
+                        </button>
+                    ))}
                 </div>
 
-                {showAddFriend && (
-                    <div className="p-3 bg-slate-800/80 border-b border-slate-700/50">
-                        <form onSubmit={handleAddFriend} className="flex gap-2">
-                            <input
-                                type="text"
-                                value={addFriendInput}
-                                onChange={(e) => setAddFriendInput(e.target.value)}
-                                placeholder="Enter Username"
-                                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-amber-500/50 transition-colors"
-                                autoFocus
-                            />
-                            <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl transition-colors">ADD</button>
-                        </form>
+                {/* Status message */}
+                {statusMsg && (
+                    <div className="mx-4 mt-3 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600 text-xs text-center font-bold">
+                        {statusMsg}
                     </div>
                 )}
 
                 <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-                    {friends.length === 0 ? (
-                        <p className="text-slate-600 text-sm text-center p-8">No friends online</p>
-                    ) : (
-                        friends.map(f => (
-                            <div key={f._id} className="flex items-center justify-between bg-slate-800/40 hover:bg-slate-700/40 p-3 rounded-xl transition cursor-pointer border border-slate-700/30">
-                                <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold shadow-inner border border-slate-600">{f.username[0]?.toUpperCase()}</div>
-                                        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-800 ${f.isOnline ? 'bg-emerald-500' : 'bg-slate-500'}`} />
+                    {/* Friends List */}
+                    {friendsTab === 'friends' && (
+                        friends.length === 0
+                            ? <p className="text-slate-400 text-xs text-center py-8">No friends yet. Search someone's rank tag to add them!</p>
+                            : <div className="flex flex-col gap-1.5">
+                                {friends.map(f => (
+                                    <div key={f._id} className="flex items-center justify-between bg-white hover:bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 transition-colors shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600 border border-indigo-100">
+                                                    {f.username?.[0]?.toUpperCase()}
+                                                </div>
+                                                <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${f.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-800 font-bold leading-tight">{f.username}</p>
+                                                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{f.uniqueTag}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] text-indigo-500 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">{f.mmr} MMR</span>
+                                            {f.isOnline && roomCode && matchType === 'PRIVATE' && (
+                                                <button onClick={() => socketService.emit('invite_friend', { roomCode, friendId: f._id })}
+                                                    className="p-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-sm">
+                                                    <UserPlus size={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-slate-200 text-sm font-bold">{f.username}</p>
-                                        <p className="text-slate-500 text-[10px] tracking-wide mt-0.5">{f.mmr || 1000} MMR</p>
-                                    </div>
-                                </div>
-                                {f.isOnline && roomCode && matchType === 'PRIVATE' && (
-                                    <button onClick={() => socketService.emit('invite_friend', { roomCode, friendId: f._id })}
-                                        className="p-2 bg-amber-500/10 text-amber-500 border border-amber-500/30 rounded-lg hover:bg-amber-500 hover:text-slate-900 transition-colors">
-                                        <UserPlus size={18} />
-                                    </button>
-                                )}
+                                ))}
                             </div>
-                        ))
+                    )}
+
+                    {/* Requests */}
+                    {friendsTab === 'requests' && (
+                        requests.length === 0
+                            ? <p className="text-slate-400 text-xs text-center py-8">No pending requests</p>
+                            : <div className="flex flex-col gap-1.5">
+                                {requests.map(r => (
+                                    <div key={r._id} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-2.5 shadow-sm">
+                                        <div>
+                                            <p className="text-sm text-slate-800 font-bold leading-tight">{r.username}</p>
+                                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{r.uniqueTag}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => acceptRequest(r._id)}
+                                                className="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center transition-colors">
+                                                <Check size={16} className="text-emerald-600" />
+                                            </button>
+                                            <button onClick={() => declineRequest(r._id)}
+                                                className="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center justify-center transition-colors">
+                                                <X size={16} className="text-rose-600" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                    )}
+
+                    {/* Search */}
+                    {friendsTab === 'search' && (
+                        <div>
+                            <div className="relative mb-4">
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input type="text" placeholder="Search by name or tag…" value={searchQuery}
+                                    onChange={e => searchUsers(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400
+                                        text-sm rounded-xl pl-9 pr-4 py-3 outline-none focus:border-indigo-400 focus:bg-white transition-colors shadow-sm" />
+                            </div>
+
+                            {/* Your tag for sharing */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-4 text-center shadow-sm">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1 font-bold">Your Tag</p>
+                                <button onClick={() => {
+                                    navigator.clipboard?.writeText(user?.uniqueTag);
+                                    dispatch({ type: 'game/addLog', payload: 'Tag copied!' });
+                                }}
+                                    className="text-indigo-600 font-mono font-black text-lg hover:text-indigo-500 transition-colors"
+                                    title="Tap to copy">{user?.uniqueTag}</button>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                {searchResults.map(u => (
+                                    <div key={u._id} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-2.5 shadow-sm">
+                                        <div>
+                                            <p className="text-sm text-slate-800 font-bold leading-tight">{u.username}</p>
+                                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{u.uniqueTag}</p>
+                                        </div>
+                                        <button onClick={() => sendRequest(u.uniqueTag)}
+                                            className="p-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors">
+                                            <UserPlus size={16} className="text-indigo-600" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
 
             {/* Chat Box (If in private room) */}
             {roomCode && matchType === 'PRIVATE' && (
-                <div className="h-56 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-700/50 flex flex-col overflow-hidden shadow-xl">
-                    <div className="p-3 border-b border-slate-700/50 bg-slate-800/50">
-                        <span className="text-slate-300 text-xs font-bold uppercase tracking-widest flex items-center gap-2"><MessageCircle size={16} className="text-blue-400" /> Room Chat</span>
+                <div className="h-56 bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200 flex flex-col overflow-hidden shadow-sm">
+                    <div className="p-3 border-b border-slate-100 bg-slate-50">
+                        <span className="text-slate-700 text-xs font-bold uppercase tracking-widest flex items-center gap-2"><MessageCircle size={16} className="text-indigo-500" /> Room Chat</span>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 text-xs space-y-1.5">
                         {chatMessages.map((msg, i) => (
                             <div key={i} className="mb-1 leading-relaxed">
-                                <span className={`font-black ${msg.isMe ? 'text-amber-400' : 'text-slate-400'}`}>{msg.username}: </span>
-                                <span className="text-slate-300 relative tracking-wide">{msg.message}</span>
+                                <span className={`font-black ${msg.isMe ? 'text-indigo-600' : 'text-slate-600'}`}>{msg.username}: </span>
+                                <span className="text-slate-700 relative tracking-wide">{msg.message}</span>
                             </div>
                         ))}
                         <div ref={chatEndRef} />
                     </div>
-                    <div className="p-3 bg-slate-800/50 border-t border-slate-700/50 flex gap-2">
+                    <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
                         <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChat()}
-                            placeholder="Message..." className="flex-1 bg-slate-900 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500/50 transition-colors" />
-                        <button onClick={handleChat} className="bg-amber-500 hover:bg-amber-400 text-slate-900 p-2 rounded-xl transition shadow-sm"><Send size={18} /></button>
+                            placeholder="Message..." className="flex-1 bg-white border border-slate-200 text-slate-800 px-3 py-2 rounded-xl text-sm outline-none focus:border-indigo-400 shadow-sm transition-colors" />
+                        <button onClick={handleChat} className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-xl transition shadow-sm"><Send size={18} /></button>
                     </div>
                 </div>
             )}
@@ -620,73 +752,85 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
 
     const renderSettingsTab = () => (
         <div className="flex-1 flex flex-col pt-6 px-4 pb-20 overflow-y-auto">
-            <h2 className="text-xl font-black text-amber-400 tracking-widest uppercase mb-6 pl-2">Settings</h2>
+            <h2 className="text-xl font-black text-indigo-600 tracking-widest uppercase mb-6 pl-2">Settings</h2>
 
-            <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl border border-slate-700/50 p-5 shadow-xl space-y-8">
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200 p-5 shadow-sm space-y-8">
                 {/* Game Guide Modal Trigger */}
                 <div className="space-y-3">
                     <button
                         onClick={() => setShowRules(true)}
-                        className="w-full flex items-center justify-between p-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl transition-colors group">
-                        <span className="text-amber-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                        className="w-full flex items-center justify-between p-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors group shadow-sm">
+                        <span className="text-indigo-600 font-bold uppercase tracking-widest flex items-center gap-2">
                             <HelpCircle size={18} /> How to Play
                         </span>
-                        <ChevronRight className="text-amber-500/50 group-hover:text-amber-400 transition-colors" size={20} />
+                        <ChevronRight className="text-indigo-400 group-hover:text-indigo-600 transition-colors" size={20} />
                     </button>
 
                     {/* Embedded Expansion (instead of true modal for simplicity to avoid full screen z-index wars on tabs) */}
                     {showRules && (
-                        <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 text-sm text-slate-300 space-y-4 shadow-inner relative animate-in fade-in slide-in-from-top-2">
-                            <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 bg-slate-900/50 rounded-full p-1"><X size={16} /></button>
-                            <h3 className="font-black text-amber-500 tracking-widest uppercase mb-1 border-b border-slate-700/50 pb-2">Rulebook</h3>
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 text-sm text-slate-700 space-y-4 shadow-sm relative animate-in fade-in slide-in-from-top-2">
+                            <button onClick={() => setShowRules(false)} className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 bg-slate-50 rounded-full p-1 border border-slate-100"><X size={16} /></button>
+                            <h3 className="font-black text-indigo-600 tracking-widest uppercase mb-1 border-b border-slate-100 pb-2">Rulebook</h3>
                             <p className="flex items-start gap-3">
                                 <span className="text-amber-500 mt-0.5"><Star size={16} /></span>
-                                <span className="leading-relaxed"><strong>Goal:</strong> Be the first to move all your pieces to the center home zone. The game continues until only one player remains!</span>
+                                <span className="leading-relaxed"><strong className="text-slate-900">Goal:</strong> Be the first to move all your pieces to the center home zone. The game continues until only one player remains!</span>
                             </p>
                             <p className="flex items-start gap-3">
-                                <span className="text-red-400 mt-0.5"><Gamepad2 size={16} /></span>
-                                <span className="leading-relaxed"><strong>Rolls:</strong> Roll the dice to move. Rolling a <strong className="text-amber-400">4</strong> or an <strong className="text-amber-400">8</strong> grants you an extra bonus roll!</span>
+                                <span className="text-indigo-500 mt-0.5"><Gamepad2 size={16} /></span>
+                                <span className="leading-relaxed"><strong className="text-slate-900">Rolls:</strong> Roll the dice to move. Rolling a <strong className="text-indigo-600">4</strong> or an <strong className="text-indigo-600">8</strong> grants you an extra bonus roll!</span>
                             </p>
                             <p className="flex items-start gap-3">
-                                <span className="text-blue-400 mt-0.5"><X size={16} /></span>
-                                <span className="leading-relaxed"><strong>Captures:</strong> Landing exactly on an opponent's piece sends it back to base. You also earn a bonus roll!</span>
+                                <span className="text-rose-500 mt-0.5"><X size={16} /></span>
+                                <span className="leading-relaxed"><strong className="text-slate-900">Captures:</strong> Landing exactly on an opponent's piece sends it back to base. You also earn a bonus roll!</span>
                             </p>
                             <p className="flex items-start gap-3">
-                                <span className="text-emerald-400 mt-0.5"><Monitor size={16} /></span>
-                                <span className="leading-relaxed"><strong>Safe Zones:</strong> Crossed cells are Safe Zones. Pieces cannot be captured while resting on these squares.</span>
+                                <span className="text-emerald-500 mt-0.5"><Monitor size={16} /></span>
+                                <span className="leading-relaxed"><strong className="text-slate-900">Safe Zones:</strong> Crossed cells are Safe Zones. Pieces cannot be captured while resting on these squares.</span>
                             </p>
                         </div>
                     )}
                 </div>
 
-                {/* Game & device Settings Container */}
-                <div className="space-y-2 pt-2 border-t border-slate-700/50">
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3">Game Rules</p>
-                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
-                        <span className="text-sm font-bold text-slate-300">Roll on Capture</span>
-                        <input type="checkbox" checked={bonusOnCapture} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnCapture: e.target.checked } })} className="accent-amber-500 w-5 h-5 cursor-pointer scale-110" />
-                    </label>
-                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
-                        <span className="text-sm font-bold text-slate-300">Roll on Home</span>
-                        <input type="checkbox" checked={bonusOnEntry} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnEntry: e.target.checked } })} className="accent-amber-500 w-5 h-5 cursor-pointer scale-110" />
+                {/* Display Settings */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">Display</p>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
+                        <span className="text-sm font-bold text-slate-700">Full Screen</span>
+                        <input type="checkbox" checked={isFullscreen} onChange={(e) => {
+                            if (e.target.checked) document.documentElement.requestFullscreen().catch(() => { });
+                            else if (document.exitFullscreen) document.exitFullscreen();
+                        }} className="accent-indigo-500 w-5 h-5 cursor-pointer scale-110" />
                     </label>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-700/50">
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3">Device Settings</p>
-                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
-                        <span className="text-sm font-bold text-slate-300">Sound Effects</span>
-                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Sound ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-amber-500 w-5 h-5 cursor-pointer border-none scale-110" />
+                {/* Game & device Settings Container */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">Game Rules</p>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
+                        <span className="text-sm font-bold text-slate-700">Roll on Capture</span>
+                        <input type="checkbox" checked={bonusOnCapture} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnCapture: e.target.checked } })} className="accent-indigo-500 w-5 h-5 cursor-pointer scale-110" />
                     </label>
-                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer transition border border-slate-700/30">
-                        <span className="text-sm font-bold text-slate-300">Haptic Vibration</span>
-                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Vibration ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-amber-500 w-5 h-5 cursor-pointer border-none scale-110" />
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
+                        <span className="text-sm font-bold text-slate-700">Roll on Home</span>
+                        <input type="checkbox" checked={bonusOnEntry} onChange={(e) => dispatch({ type: 'game/setSettings', payload: { bonusOnEntry: e.target.checked } })} className="accent-indigo-500 w-5 h-5 cursor-pointer scale-110" />
+                    </label>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">Device Settings</p>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
+                        <span className="text-sm font-bold text-slate-700">Sound Effects</span>
+                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Sound ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-indigo-500 w-5 h-5 cursor-pointer border-none scale-110" />
+                    </label>
+                    <label className="flex items-center justify-between p-3 min-h-[50px] bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer transition border border-slate-100">
+                        <span className="text-sm font-bold text-slate-700">Haptic Vibration</span>
+                        <input type="checkbox" defaultChecked onChange={(e) => dispatch({ type: 'game/addLog', payload: `Vibration ${e.target.checked ? 'Enabled' : 'Disabled'}` })} className="accent-indigo-500 w-5 h-5 cursor-pointer border-none scale-110" />
                     </label>
                 </div>
 
                 {/* Account Actions */}
-                <div className="pt-6 border-t border-slate-700/50">
-                    <button onClick={handleLogout} className="w-full py-4 text-red-500 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-2xl font-black uppercase tracking-widest text-sm transition flex justify-center items-center gap-2">
+                <div className="pt-6 border-t border-slate-100">
+                    <button onClick={handleLogout} className="w-full py-4 text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-2xl font-black uppercase tracking-widest text-sm transition flex justify-center items-center gap-2 shadow-sm">
                         <LogOut size={18} /> Logout
                     </button>
                 </div>
@@ -699,7 +843,7 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
         const onlineFriendsCount = friends.filter(f => f.isOnline).length;
 
         return (
-            <div className="absolute bottom-0 left-0 right-0 h-[72px] bg-slate-900 border-t border-slate-800/80 z-50 px-2 sm:px-6 flex justify-around items-center pb-2" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.5)' }}>
+            <div className="absolute bottom-0 left-0 right-0 h-[72px] bg-white border-t border-slate-200 z-50 px-2 sm:px-6 flex justify-around items-center pb-2" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.05)' }}>
                 {[
                     { id: 'home', icon: Star, label: 'Play' },
                     { id: 'friends', icon: Users, label: 'Friends', badge: onlineFriendsCount > 0 ? onlineFriendsCount : null },
@@ -711,19 +855,19 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
                     return (
                         <button key={tab.id}
                             onClick={() => tab.action ? tab.action() : setActiveTab(tab.id)}
-                            className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors relative ${isActive ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                            className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors relative ${isActive ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
 
                             <div className="relative">
-                                <Icon size={24} className={isActive ? 'drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : ''} />
+                                <Icon size={24} className={isActive ? 'drop-shadow-[0_2px_4px_rgba(79,70,229,0.3)]' : ''} />
                                 {tab.badge && (
-                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border border-slate-900 shadow-sm">
+                                    <div className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-white shadow-sm">
                                         {tab.badge}
                                     </div>
                                 )}
                             </div>
 
                             <span className="text-[10px] font-bold tracking-wider">{tab.label}</span>
-                            {isActive && <div className="absolute -top-px w-10 h-1 bg-amber-500 rounded-b-full shadow-[0_2px_8px_rgba(245,158,11,0.8)]" />}
+                            {isActive && <div className="absolute -top-px w-10 h-1 bg-indigo-500 rounded-b-full shadow-sm" />}
                         </button>
                     );
                 })}
@@ -732,16 +876,16 @@ const UnifiedLobby = ({ onProfile, onLeaderboard }) => {
     };
 
     return (
-        <div className="fixed inset-0 w-full h-full bg-slate-900 overflow-hidden flex flex-col font-sans select-none text-slate-100 pb-[72px]">
+        <div className="fixed inset-0 w-full h-full bg-slate-50 overflow-hidden flex flex-col font-sans select-none text-slate-800 pb-[72px]">
             {/* Cinematic Background */}
-            <div className="absolute inset-0 opacity-40 mix-blend-color-dodge transition-all duration-1000 z-0 pointer-events-none"
+            <div className="absolute inset-0 opacity-[0.15] mix-blend-multiply transition-all duration-1000 z-0 pointer-events-none"
                 style={{
-                    background: lobbyMode === 'ONLINE' ? 'radial-gradient(ellipse at top right, rgba(59,130,246,0.3) 0%, transparent 60%), radial-gradient(ellipse at bottom left, rgba(245,158,11,0.2) 0%, transparent 60%)' :
-                        'radial-gradient(ellipse at center, rgba(239,68,68,0.2) 0%, transparent 70%)'
+                    background: lobbyMode === 'ONLINE' ? 'radial-gradient(ellipse at top right, rgba(99,102,241,0.5) 0%, transparent 60%), radial-gradient(ellipse at bottom left, rgba(16,185,129,0.3) 0%, transparent 60%)' :
+                        'radial-gradient(ellipse at center, rgba(99,102,241,0.3) 0%, transparent 70%)'
                 }} />
 
             {/* Grid Texture */}
-            <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221%22/></svg>')] z-0" />
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><rect width=%2240%22 height=%2240%22 fill=%22none%22 stroke=%22%23000000%22 stroke-width=%221%22/></svg>')] z-0" />
 
             {/* Active Tab View */}
             <div className={`relative z-10 flex-1 flex flex-col ${activeTab !== 'rank' ? 'overflow-y-auto' : ''} w-full max-w-md mx-auto`}>

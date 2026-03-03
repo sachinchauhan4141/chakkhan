@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { togglePause } from '../store/gameSlice';
-import { LogOut, Pause, Play } from 'lucide-react';
+import { LogOut, Pause, Play, Maximize, Minimize } from 'lucide-react';
 
 const GameHeader = ({
     availableMoves, playerLabel, accentColor,
@@ -13,6 +13,32 @@ const GameHeader = ({
 }) => {
     const dispatch = useDispatch();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Initial check for fullscreen state
+    React.useEffect(() => {
+        const checkFullscreen = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', checkFullscreen);
+        checkFullscreen();
+        return () => document.removeEventListener('fullscreenchange', checkFullscreen);
+    }, []);
+
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                }
+            }
+        } catch (err) {
+            console.error("Error toggling fullscreen", err);
+        }
+        setMenuOpen(false);
+    };
 
     return (
         <header className="w-full flex items-center justify-between px-4 py-2 border-b border-slate-700/60 bg-slate-800/60 backdrop-blur-md shrink-0 relative z-40">
@@ -61,6 +87,12 @@ const GameHeader = ({
                                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-200 hover:bg-slate-700 transition-colors">
                                 {isPaused ? <Play size={15} /> : <Pause size={15} />}
                                 {isPaused ? 'Resume' : 'Pause'}
+                            </button>
+                            <div className="h-px bg-slate-700" />
+                            <button onClick={toggleFullscreen}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-indigo-300 hover:bg-slate-700 transition-colors">
+                                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                                {isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
                             </button>
                             <div className="h-px bg-slate-700" />
                             <button onClick={() => { setMenuOpen(false); onExit(); }}

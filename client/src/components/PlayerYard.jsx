@@ -22,8 +22,11 @@ const PlayerYard = ({ player }) => {
   } = useSelector(s => s.game);
 
   const isCurrentTurn = PLAYERS[currentPlayerIdx] === player;
-  const piecesInYard = pieces[player].map((pos, i) => ({ pos, i })).filter(p => p.pos === -1);
-  const piecesHome = pieces[player].filter(pos => pos === 24).length;
+
+  // Guard against inactive players in offline mode (pieces[player] might be undefined)
+  const playerPieces = pieces[player] || [];
+  const piecesInYard = playerPieces.map((pos, i) => ({ pos, i })).filter(p => p.pos === -1);
+  const piecesHome = playerPieces.filter(pos => pos === 24).length;
 
   // Determine if the human can interact with this yard
   const isBot = botPlayers?.includes(player);

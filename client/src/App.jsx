@@ -79,8 +79,20 @@ const App = () => {
   // Online sync
   React.useEffect(() => {
     if (!isOnline) return;
-    socketService.on('sync_action', a => dispatch(a));
-    return () => socketService.off('sync_action');
+
+    const handleSync = a => dispatch(a);
+    const handleDisconnect = () => {
+      dispatch({ type: 'game/addLog', payload: 'Connection lost. Reconnecting...' });
+      dispatch(setMultiplayerState({ gameMode: 'MENU', isOnline: false, roomCode: null, connectedPlayers: [], activePlayers: ['p1', 'p2', 'p3', 'p4'] }));
+    };
+
+    socketService.on('sync_action', handleSync);
+    socketService.on('disconnect', handleDisconnect);
+
+    return () => {
+      socketService.off('sync_action', handleSync);
+      socketService.off('disconnect', handleDisconnect);
+    };
   }, [isOnline, dispatch]);
 
   // Bot turns
@@ -101,8 +113,8 @@ const App = () => {
   if (isLoading) return <LoadingScreen onComplete={() => setIsLoading(false)} />;
   if (!isAuthenticated && !authLoading) return <AuthScreen />;
   if (authLoading) return (
-    <div className="fixed inset-0 bg-slate-900 flex items-center justify-center" style={{ height: '100dvh' }}>
-      <span className="text-amber-400 animate-pulse text-sm">Loading…</span>
+    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center" style={{ height: '100dvh' }}>
+      <span className="text-indigo-600 animate-pulse text-sm font-bold tracking-widest uppercase">Loading…</span>
     </div>
   );
 
@@ -119,7 +131,7 @@ const App = () => {
   // ── GAME SCREEN ──
   return (
     <>
-      <div className="fixed inset-0 w-full flex flex-col bg-slate-900 text-slate-100 overflow-hidden" style={{ height: '100dvh' }}>
+      <div className="fixed inset-0 w-full flex flex-col bg-slate-50 text-slate-800 overflow-hidden" style={{ height: '100dvh' }}>
         <GameHeader availableMoves={availableMoves} playerLabel={playerLabel} accentColor={accentColor}
           rollResult={rollResult} isPaused={isPaused} onExit={() => setShowExitConfirm(true)}
           currentTurnRolls={currentTurnRolls} />
@@ -136,7 +148,7 @@ const App = () => {
             <Board />
             {displayMessage && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-                <div className="bg-slate-900/90 border border-slate-600 text-white px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md animate-[toastFade_2s_ease_forwards] text-center max-w-[80%]">
+                <div className="bg-white/95 border border-slate-200 text-slate-800 px-6 py-3 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] backdrop-blur-md animate-[toastFade_2s_ease_forwards] text-center max-w-[80%]">
                   <span className="text-base sm:text-lg font-bold tracking-wide">{displayMessage}</span>
                 </div>
               </div>

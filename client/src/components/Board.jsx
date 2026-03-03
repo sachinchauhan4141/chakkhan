@@ -22,6 +22,7 @@ const Board = () => {
     // so we can compute stacking offsets when multiple pieces share a cell
     const cellOccupancy = {};
     activePlayers.forEach(player => {
+        if (!piecesState[player]) return; // Safeguard for inactive players in offline
         piecesState[player].forEach((posIndex, pieceIndex) => {
             if (posIndex === -1) return;
             const cellIndex = posIndex === 24 ? 12 : PLAYER_PATHS[player][posIndex];
@@ -64,8 +65,9 @@ const Board = () => {
 
             {/* Piece Layer — absolute, on top of cells */}
             <div className="absolute inset-0 z-30 pointer-events-none">
-                {activePlayers.map(player =>
-                    piecesState[player].map((posIndex, pieceIndex) => {
+                {activePlayers.map(player => {
+                    if (!piecesState[player]) return null;
+                    return piecesState[player].map((posIndex, pieceIndex) => {
                         if (posIndex === -1) return null;
 
                         const { top, left } = getCellCoordinates(player, posIndex);
@@ -101,8 +103,8 @@ const Board = () => {
                                 <Piece player={player} pieceIndex={pieceIndex} pos={posIndex} />
                             </div>
                         );
-                    })
-                )}
+                    });
+                })}
             </div>
         </div>
     );

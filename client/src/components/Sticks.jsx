@@ -58,45 +58,23 @@ const Sticks = () => {
                     {sticks.map((isFlat, i) => (
                         <div
                             key={i}
-                            className={`relative rounded-full overflow-hidden border-4 ${animating
-                                ? 'animate-[stickTumble_0.6s_ease-out_forwards]'
-                                : 'animate-[stickLand_0.25s_ease-out_forwards]'
-                                }`}
+                            className={`preserve-3d relative cursor-default ${animating ? 'animate-shell-tumble' : 'animate-shell-land'}`}
                             style={{
-                                width: '28px',
-                                height: '110px',
-                                animationDelay: `${i * 70}ms`,
-                                /* Flat side: cream/bone color. Bark side: dark brown */
-                                background: isFlat
-                                    ? 'linear-gradient(160deg, #fff8f0 10%, #e8c98a 50%, #d4aa66 100%)'
-                                    : 'linear-gradient(160deg, #4a2c1a 10%, #2e180d 50%, #1c0e07 100%)',
-                                borderColor: isFlat ? '#c9974a' : '#0d0704',
-                                boxShadow: isFlat
-                                    ? 'inset 2px 4px 8px rgba(255,255,255,0.6), 0 8px 20px rgba(0,0,0,0.6)'
-                                    : 'inset -2px -4px 10px rgba(0,0,0,0.8), 0 8px 20px rgba(0,0,0,0.8)',
+                                width: '32px',
+                                height: '80px',
+                                animationDelay: `${i * 120}ms`,
+                                transform: isFlat ? 'rotateY(0deg)' : 'rotateY(180deg)'
                             }}
                         >
-                            {/* Wood grain lines */}
-                            {isFlat ? (
-                                /* Flat inner side: light grain */
-                                <div className="absolute inset-0 opacity-30"
-                                    style={{ background: 'repeating-linear-gradient(10deg, transparent, transparent 6px, rgba(160,100,30,0.4) 6px, rgba(160,100,30,0.4) 7px)' }}
-                                />
-                            ) : (
-                                /* Dark bark side: tight dark grain */
-                                <div className="absolute inset-0 opacity-50"
-                                    style={{ background: 'repeating-linear-gradient(5deg, transparent, transparent 3px, rgba(0,0,0,0.5) 3px, rgba(0,0,0,0.5) 4px)' }}
-                                />
-                            )}
+                            {/* Front Face (Flat white side of the shell) */}
+                            <div className="absolute inset-0 backface-hidden rounded-[40%] bg-gradient-to-b from-[#f8f9fa] to-[#e9ecef] shadow-[inset_0_0_15px_rgba(0,0,0,0.1),_0_5px_15px_rgba(0,0,0,0.2)] border border-[#dee2e6] flex items-center justify-center overflow-hidden">
+                                <div className="w-1.5 h-3/4 rounded-full bg-gradient-to-b from-[#ced4da] to-[#adb5bd] shadow-[inset_0_2px_5px_rgba(0,0,0,0.2)]"></div>
+                            </div>
 
-                            {/* Flat-side center glare highlight */}
-                            {isFlat && (
-                                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/50 to-transparent rounded-t-full" />
-                            )}
-
-                            {/* Label at bottom so player can read result */}
-                            <div className={`absolute bottom-2 inset-x-0 flex justify-center text-[10px] font-black uppercase tracking-widest ${isFlat ? 'text-amber-800' : 'text-amber-200'}`}>
-                                {isFlat ? 'F' : 'B'}
+                            {/* Back Face (Rounded brown ribbed side of the shell) */}
+                            <div className="absolute inset-0 backface-hidden rounded-[40%] bg-gradient-to-br from-[#8b5a2b] to-[#5c3a21] shadow-[inset_0_-5px_15px_rgba(0,0,0,0.4),_0_5px_15px_rgba(0,0,0,0.3)] border border-[#4a2e1b] overflow-hidden" style={{ transform: 'rotateY(180deg) translateZ(5px)' }}>
+                                <div className="absolute inset-0 wood-pattern opacity-60 mix-blend-multiply"></div>
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]"></div>
                             </div>
                         </div>
                     ))}

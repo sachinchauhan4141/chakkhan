@@ -3,8 +3,9 @@ import { rollSticks, applyMove, PLAYER_PATHS, EXPORTED_SAFE_CELLS } from '../sto
 const INNER_RING_START = 16; // path positions 0-15 = outer ring, 16-23 = inner ring
 
 export const executeBotTurn = (gameState, dispatch) => {
-    const getThinkingTime = () => 1500 + Math.floor(Math.random() * 1000);
-    const getMovingTime = () => 1000 + Math.floor(Math.random() * 800);
+    // Make bots feel more realistic by adding human-like hesitation 
+    const getThinkingTime = () => 2000 + Math.floor(Math.random() * 1500); // 2 - 3.5s to roll
+    const getMovingTime = () => 1800 + Math.floor(Math.random() * 1200);   // 1.8 - 3s to pick a piece
 
     // If we need to roll
     if (gameState.gameState === 'ROLLING') {
